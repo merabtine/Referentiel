@@ -7,7 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/122dEfq8Jn7rov8ZDIQEjz1xEPG5g67Tf
 """
 
-!pip install together
 
 import pandas as pd
 import re
@@ -88,7 +87,7 @@ from tqdm import tqdm
 from together import Together
 from threading import Lock
 
-client = Together(api_key="780e30e84fd1285f63229906c7c4ffa7782fdea7e8b33b84247a58445d585252")
+client = Together(api_key="")
 
 input_file = "groupement_resultat.csv"
 output_file = "classification.csv"
