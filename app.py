@@ -1,67 +1,90 @@
-
-
 import streamlit as st
 import pandas as pd
-import io
+import time
+import datetime
+import altair as alt
 
-st.set_page_config(page_title="Gpairo Classifier", layout="wide")
+st.set_page_config(page_title="Gpairo Visualizer", layout="wide")
 
-st.title("🔧 Gpairo Classifier – Classification IA des Produits Industriels")
+st.title("📊 Gpairo Visualizer – Analyse et Comparaison des Résultats de Classification IA")
 
-menu = st.sidebar.radio("Navigation", [
-    "1️⃣ Nettoyage",
-    "2️⃣ Groupement",
-    "3️⃣ Classification IA",
-    "4️⃣ Correction des Clés",
-    "5️⃣ Export & Résultats"
-])
+tab1, tab2 = st.tabs(["📂 Chargement des fichiers", "📈 Visualisation & Statistiques"])
 
-def nettoyer_desi_arti(valeur):
-    if pd.isna(valeur):
-        return valeur
-    texte = str(valeur).strip()
-    texte = texte.lower()
-    return texte
+with tab1:
+    st.subheader("📤 Importer les fichiers")
 
-# Onglet 1 : Nettoyage
-if menu == "1️⃣ Nettoyage":
-    st.header("🧼 Nettoyage de la désignation (DESI_ARTI)")
-    fichier = st.file_uploader("Charger un fichier CSV contenant une colonne 'DESI_ARTI'", type=["csv"])
-    
-    if fichier:
-        df = pd.read_csv(fichier, encoding="latin1")
-        
-        if "DESI_ARTI" in df.columns:
-            df["DESI_ARTI"] = df["DESI_ARTI"].apply(nettoyer_desi_arti)
-            st.success("✅ Nettoyage effectué.")
-            st.dataframe(df.head(20))
-            
-            csv_buffer = io.BytesIO()
-            df.to_csv(csv_buffer, index=False, encoding="utf-8-sig")
-            csv_buffer.seek(0)
-            
-            st.download_button(
-                label="📥 Télécharger le fichier nettoyé",
-                data=csv_buffer,
-                file_name="designation_nettoyee.csv",
-                mime="text/csv"
-            )
+    col1, col2 = st.columns(2)
+    with col1:
+        fichier_avant = st.file_uploader("📝 Fichier AVANT traitement", type=["csv"], key="avant")
+    with col2:
+        fichier_apres = st.file_uploader("✅ Fichier APRÈS traitement", type=["csv"], key="apres")
+
+    if fichier_avant and fichier_apres:
+        df_avant = pd.read_csv(fichier_avant, encoding="utf-8-sig")
+        df_apres = pd.read_csv(fichier_apres, encoding="utf-8-sig")
+
+        st.success("✅ Fichiers chargés avec succès. Allez à l'onglet suivant.")
+
+with tab2:
+    if 'df_avant' in locals() and 'df_apres' in locals():
+        st.subheader("📊 Statistiques générales")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### AVANT")
+            nb_designations = df_avant["DESI_ARTI"].nunique() if "DESI_ARTI" in df_avant else len(df_avant)
+            st.metric("🧾 Désignations uniques", nb_designations)
+
+        with col2:
+            st.markdown("### APRÈS")
+            nb_noms = df_apres["nom"].nunique() if "nom" in df_apres else 0
+            st.metric("📌 Noms de produits uniques", nb_noms)
+
+        if nb_designations > 0 and nb_noms > 0:
+            reduction = round(100 * (1 - nb_noms / nb_designations), 2)
+            st.markdown(f"### 🔻 Réduction du bruit : `{reduction}%`")
+
+        st.divider()
+
+        st.subheader("📚 Répartition des catégories (après traitement)")
+
+        col3, col4, col5 = st.columns(3)
+        with col3:
+            st.metric("📂 Familles uniques", df_apres["famille"].nunique())
+        with col4:
+            st.metric("📁 Sous-familles uniques", df_apres["sous_famille"].nunique())
+        with col5:
+            st.metric("🧩 Agrégats uniques", df_apres["agregat"].nunique())
+
+        st.markdown("### 📉 Visualisation des familles")
+        familles_counts = df_apres["famille"].value_counts().reset_index()
+        familles_counts.columns = ["famille", "nb_produits"]
+
+        chart = alt.Chart(familles_counts).mark_bar().encode(
+            x=alt.X('nb_produits:Q', title="Nombre de produits"),
+            y=alt.Y('famille:N', sort='-x', title="Famille"),
+            tooltip=['famille', 'nb_produits']
+        ).properties(width=700, height=400)
+
+        st.altair_chart(chart, use_container_width=True)
+
+        st.divider()
+
+        st.subheader("⏱️ Temps d’exécution")
+
+        if "timestamp" in df_apres.columns:
+            try:
+                start = pd.to_datetime(df_apres["timestamp"].min())
+                end = pd.to_datetime(df_apres["timestamp"].max())
+                duree = end - start
+                st.write(f"🕒 Traitement effectué du `{start}` au `{end}`")
+                st.success(f"⏱️ Durée : `{str(duree)}`")
+            except:
+                st.warning("🕒 Colonne 'timestamp' non exploitable.")
         else:
-            st.error("❌ La colonne 'DESI_ARTI' est introuvable dans le fichier.")
+            st.info("ℹ️ Aucune colonne 'timestamp' trouvée dans le fichier.")
 
-elif menu == "2️⃣ Groupement":
-    st.header("🔗 Groupement à venir")
-    st.info("Cette section est en cours d’intégration. Elle permettra de grouper les désignations similaires.")
-
-elif menu == "3️⃣ Classification IA":
-    st.header("🤖 Classification IA à venir")
-    st.warning("Fonctionnalité à intégrer : appel à l’API Together avec prompts et traitement batch.")
-
-elif menu == "4️⃣ Correction des Clés":
-    st.header("🧩 Correction des clés")
-    st.info("À venir : comparaison entre fichiers et ajout automatique des clés manquantes.")
-
-elif menu == "5️⃣ Export & Résultats":
-    st.header("📤 Téléchargement des fichiers finaux")
-    st.info("Cette section vous permettra de télécharger les résultats finaux une fois le traitement complet.")
+        st.download_button("📥 Télécharger le fichier traité", df_apres.to_csv(index=False).encode("utf-8-sig"), file_name="gpairo_resultat.csv")
+    else:
+        st.info("Veuillez d'abord charger les fichiers dans l'onglet précédent.")
 
