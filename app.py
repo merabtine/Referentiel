@@ -1,27 +1,27 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import matplotlib.pyplot as plt
-from io import StringIO
 
 st.set_page_config(
     page_title="Référentiel Industriel",
     layout="wide"
 )
 
-# Logo et bouton réinitialisation dans un layout horizontal
-col_logo, col_button = st.columns([3, 1])
+# Logo + Titre alignés
+col_logo, col_title, col_button = st.columns([1, 4, 1])
 with col_logo:
-    st.image("logo.png", width=180)
+    st.image("logo.png", width=130)
+with col_title:
+    st.markdown("## **Référentiel Industriel : Données des pièces de rechange**")
 with col_button:
     if st.button("🔄 Réinitialiser l'application"):
+        for key in st.session_state.keys():
+            del st.session_state[key]
         st.experimental_rerun()
-
-st.markdown("## Référentiel Industriel : Données des pièces de rechange")
 
 st.markdown("---")
 
-# Zone centrale avec deux colonnes
+# Zone centrale à deux colonnes
 left, right = st.columns(2)
 
 def show_file_section(title, side):
@@ -37,7 +37,7 @@ def show_file_section(title, side):
             side.error(f"Erreur de lecture du fichier : {e}")
             return
 
-        side.success(f"Fichier {title} chargé avec succès !")
+        side.success(f"Fichier {title} chargé avec succès ✅")
 
         # Aperçu
         with side.expander("🧾 Aperçu des données", expanded=True):
@@ -51,7 +51,7 @@ def show_file_section(title, side):
             duplications = total_lignes - produits_uniques
             taux_duplication = round((duplications / total_lignes) * 100, 2) if total_lignes > 0 else 0
 
-            ## 1. Diagramme en camembert avec Plotly
+            # Diagramme en camembert
             stats_df = pd.DataFrame({
                 "Type": ["Produits uniques", "Duplications"],
                 "Valeur": [produits_uniques, duplications]
@@ -67,21 +67,22 @@ def show_file_section(title, side):
             )
             side.plotly_chart(fig_pie, use_container_width=True)
 
-            ## 2. Affichage du nombre total + taux de duplication (figure matplotlib)
-            fig_bar, ax = plt.subplots(figsize=(4, 2))
-            ax.barh(["Taux de duplication"], [taux_duplication], color="#d62728")
-            ax.set_xlim(0, 100)
-            ax.set_xlabel("%")
-            ax.set_title(f"Taux de duplication : {taux_duplication}%")
-            for i, v in enumerate([taux_duplication]):
-                ax.text(v + 1, i, f"{v}%", color='black', va='center')
-            side.pyplot(fig_bar, use_container_width=True)
+            # Bloc visuel résumé (HTML stylisé)
+            side.markdown(f"""
+                <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 6px solid #1f77b4; margin-top: 10px;">
+                    <h4 style="color: #1f77b4;">📌 Statistiques Générales</h4>
+                    <ul style="list-style-type: none; padding-left: 0;">
+                        <li><b>Lignes totales :</b> <span style="color: #333;">{total_lignes:,}</span></li>
+                        <li><b>Produits uniques :</b> <span style="color: #2ca02c;">{produits_uniques:,}</span></li>
+                        <li><b>Duplications détectées :</b> <span style="color: #d62728;">{duplications:,}</span></li>
+                    </ul>
+                </div>
+            """, unsafe_allow_html=True)
 
-            # Info complémentaire
-            side.markdown(f"📌 **Lignes totales :** `{total_lignes}`")
-            side.markdown(f"📌 **Produits uniques :** `{produits_uniques}`")
-            side.markdown(f"📌 **Duplications détectées :** `{duplications}`")
-
+            # 🔵 Affichage graphique final : barre horizontale
+            side.markdown("#### 📏 Volume de données")
+            progress_value = min(total_lignes / 10000, 1.0)  # Normalisation à 10 000
+            side.progress(progress_value, text=f"{total_lignes:,} désignations brutes")
         else:
             side.warning("⚠️ La colonne 'DESI_ARTI' est introuvable dans ce fichier.")
 
