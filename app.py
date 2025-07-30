@@ -93,8 +93,7 @@ show_file_section("Gpairo", left)
 # Section droite : Webpdrmif
 show_file_section("Webpdrmif", right)
 
-df_global = pd.read_csv("dataset_gpairo_webpdrmif.csv")
-
+#--------------------------------------------------------
 def show_global_base_distribution(df_global):
     if 'BASE' not in df_global.columns:
         st.error("La colonne 'BASE' est introuvable dans le dataset global.")
@@ -107,7 +106,7 @@ def show_global_base_distribution(df_global):
         base_counts,
         names=base_counts.index,
         values=base_counts.values,
-        color_discrete_sequence=["#EEEE0E", "#4430DE"],  # Jaune et Bleu
+        color_discrete_sequence=["#EEEE0E", "#4430DE"],  
         hole=0.6,
         title="Répartition des lignes par BASE"
     )
@@ -116,34 +115,20 @@ def show_global_base_distribution(df_global):
     )
     st.plotly_chart(fig_donut, use_container_width=True)
 
-# Dans ta sidebar ou en bas de page, tu peux appeler cette fonction avec ton df_global
-# Exemple simplifié :
+# Chargement backend automatique du dataset global fusionné
+try:
+    df_global = pd.read_csv("dataset_gpairo_webpdrmif.csv", encoding="utf-8-sig")
+    st.markdown("---")
+    st.header("📊 Visualisation dataset global fusionné")
 
-st.sidebar.header("Téléchargement dataset global")
-uploaded_global = st.sidebar.file_uploader("Importer dataset global fusionné (csv/xlsx)", type=["csv","xlsx"], key="global")
+    show_global_base_distribution(df_global)
 
-if uploaded_global is not None:
-    try:
-        if uploaded_global.name.endswith('.csv'):
-            df_global = pd.read_csv(uploaded_global)
-        else:
-            df_global = pd.read_excel(uploaded_global)
-        st.sidebar.success("Dataset global chargé ✅")
-        
-        # Affichage diagramme anneau en bas de page ou dans main area
-        st.markdown("---")
-        st.header("📊 Visualisation dataset global fusionné")
-        show_global_base_distribution(df_global)
-
-        # Bouton de téléchargement du dataset global
-        csv = df_global.to_csv(index=False).encode('utf-8-sig')
-        st.sidebar.download_button(
-            label="Télécharger dataset global fusionné (CSV)",
-            data=csv,
-            file_name="dataset_gpairo_webpdrmif.csv",
-            mime="text/csv"
-        )
-    except Exception as e:
-        st.sidebar.error(f"Erreur lors du chargement : {e}")
-else:
-    st.sidebar.info("Importer le dataset global fusionné pour visualiser les stats.")
+    csv = df_global.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(
+        label="Télécharger dataset global fusionné (CSV)",
+        data=csv,
+        file_name="dataset_gpairo_webpdrmif.csv",
+        mime="text/csv"
+    )
+except Exception as e:
+    st.error(f"Erreur lors du chargement du dataset global backend : {e}")
