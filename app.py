@@ -7,11 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# 🔁 Gestion de la réinitialisation (avant le layout principal)
-if st.session_state.get("reset_flag"):
-    st.session_state.clear()
-    st.session_state["reset_flag"] = False
-    st.experimental_rerun()
+
 
 # ─────────────────────────────────────────────
 # Logo + Titre alignés + bouton reset
@@ -20,10 +16,7 @@ with col_logo:
     st.image("logo.png", width=130)
 with col_title:
     st.markdown("## **Référentiel Industriel : Données des pièces de rechange**")
-with col_button:
-    if st.button("🔄 Réinitialiser l'application"):
-        st.session_state["reset_flag"] = True
-        st.experimental_rerun()
+
 
 st.markdown("---")
 
