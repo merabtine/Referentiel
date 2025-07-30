@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
 import io
 
 st.set_page_config(page_title="Gpairo Visualizer", layout="wide")
-
 st.title("📊 Gpairo Visualizer – Analyse des jeux de données")
 
 # Session state pour gérer le reset
@@ -46,7 +45,7 @@ if not st.session_state.reset and "df_avant" in locals() and "df_apres" in local
 
         st.markdown("### 📊 Statistiques principales")
         nb_total = len(df)
-        nb_uniques = df["DESI_ARTI"].nunique() if "DESI_ARTI" in df else df["nom"].nunique()
+        nb_uniques = df["DESI_ARTI"].nunique() if "DESI_ARTI" in df.columns else df["nom"].nunique()
         st.metric("📦 Total de produits", nb_total)
         st.metric("🧾 Désignations uniques", nb_uniques)
 
@@ -68,19 +67,32 @@ if not st.session_state.reset and "df_avant" in locals() and "df_apres" in local
             ).properties(width=700, height=400)
             st.altair_chart(chart, use_container_width=True)
 
-        st.markdown("### 🧪 Matrice de corrélation (si applicable)")
+        st.markdown("### 🧪 Matrice de corrélation (matplotlib uniquement)")
         num_cols = df.select_dtypes(include='number')
         if not num_cols.empty and num_cols.shape[1] > 1:
-            fig, ax = plt.subplots()
-            sns.heatmap(num_cols.corr(), annot=True, cmap="coolwarm", ax=ax)
+            corr = num_cols.corr()
+            fig, ax = plt.subplots(figsize=(8, 6))
+            cax = ax.matshow(corr, cmap="coolwarm")
+            fig.colorbar(cax)
+
+            ticks = np.arange(len(corr.columns))
+            ax.set_xticks(ticks)
+            ax.set_yticks(ticks)
+            ax.set_xticklabels(corr.columns, rotation=90)
+            ax.set_yticklabels(corr.columns)
+
+            for (i, j), val in np.ndenumerate(corr.values):
+                ax.text(j, i, f"{val:.2f}", ha='center', va='center', color='black', fontsize=8)
+
             st.pyplot(fig)
         else:
-            st.info("Pas assez de colonnes numériques pour une matrice de corrélation.")
+            st.info("Pas assez de colonnes numériques pour générer une matrice de corrélation.")
 
         st.markdown("### 💾 Télécharger le fichier affiché")
         buffer = io.StringIO()
         df.to_csv(buffer, index=False, encoding="utf-8-sig")
         st.download_button("📥 Télécharger le fichier CSV", buffer.getvalue(), file_name="base_selectionnee.csv", mime="text/csv")
+
 else:
     if st.session_state.reset:
         st.warning("⚠️ Application réinitialisée. Veuillez recharger les fichiers.")
