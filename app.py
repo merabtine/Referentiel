@@ -1,94 +1,66 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
 import matplotlib.pyplot as plt
-import numpy as np
-import io
+import base64
+import os
 
-st.set_page_config(page_title="Refinor", layout="wide")
+st.set_page_config(page_title="Refinor", layout="centered")
 
-logo_path = "logo.png"  
-col_logo, col_title = st.columns([1, 5])
-with col_logo:
-    st.image(logo_path, width=80)
-with col_title:
-    st.title("Refinor – Analyse des jeux de données référentiels")
+# Affichage du logo
+def show_logo(png_file):
+    if os.path.exists(png_file):
+        with open(png_file, "rb") as image_file:
+            encoded = base64.b64encode(image_file.read()).decode()
+        st.markdown(
+            f"<div style='text-align: center'><img src='data:image/png;base64,{encoded}' width='200'/></div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.warning("Logo non trouvé.")
 
-# Reset total via session state
-if "fichier_1" not in st.session_state:
-    st.session_state.fichier_1 = None
-if "fichier_2" not in st.session_state:
-    st.session_state.fichier_2 = None
-if "restarted" not in st.session_state:
-    st.session_state.restarted = False
+show_logo("logo.png")  # <-- place ton fichier logo ici
 
-def reset_app():
-    st.session_state.fichier_1 = None
-    st.session_state.fichier_2 = None
-    st.session_state.restarted = True
+# Reset de l'application (nettoyage total)
+if st.button("🔄 Réinitialiser"):
     st.experimental_rerun()
 
-tab1, tab2 = st.tabs(["Importer les fichiers", "Explorer les données"])
+st.title("Analyse des fichiers Refinor")
 
-with tab1:
-    st.subheader("Charger les fichiers de données")
+# Chargement des deux fichiers
+file1 = st.file_uploader("📁 Charger le fichier GPairo", type=["csv"])
+file2 = st.file_uploader("📁 Charger le fichier Webpdrmif", type=["csv"])
+
+# Traitement si les deux fichiers sont chargés
+if file1 and file2:
+    df1 = pd.read_csv(file1, sep=";", encoding="utf-8", on_bad_lines="skip")
+    df2 = pd.read_csv(file2, sep=";", encoding="utf-8", on_bad_lines="skip")
+
+    st.subheader("Aperçu du fichier GPairo")
+    st.dataframe(df1.head(10))
+
+    st.subheader("Aperçu du fichier Webpdrmif")
+    st.dataframe(df2.head(10))
+
+    # Statistiques dynamiques
     col1, col2 = st.columns(2)
-
     with col1:
-        st.session_state.fichier_1 = st.file_uploader("Fichier 1", type=["csv"], key="file1")
+        st.metric("🧾 Lignes GPairo", f"{df1.shape[0]}")
+        st.metric("🧾 Colonnes GPairo", f"{df1.shape[1]}")
     with col2:
-        st.session_state.fichier_2 = st.file_uploader("Fichier 2", type=["csv"], key="file2")
+        st.metric("🧾 Lignes Webpdrmif", f"{df2.shape[0]}")
+        st.metric("🧾 Colonnes Webpdrmif", f"{df2.shape[1]}")
 
-    if st.session_state.fichier_1 and st.session_state.fichier_2:
-        st.success("Fichiers chargés avec succès. Passez à l’onglet suivant.")
-        st.button("Réinitialiser", on_click=reset_app)
+    # Détection des colonnes numériques communes
+    numeric_cols = list(set(df1.select_dtypes(include='number').columns) & set(df2.select_dtypes(include='number').columns))
 
-# Onglet d’analyse
-if st.session_state.fichier_1 and st.session_state.fichier_2:
-    df1 = pd.read_csv(st.session_state.fichier_1, encoding="utf-8-sig")
-    df2 = pd.read_csv(st.session_state.fichier_2, encoding="utf-8-sig")
-
-    with tab2:
-        st.subheader("Choix du jeu de données à explorer")
-
-        base_choisie = st.radio("Sélectionnez une base :", ["Fichier 1", "Fichier 2"], horizontal=True)
-        df = df1 if base_choisie == "Fichier 1" else df2
-
-        st.markdown("### Aperçu du fichier")
-        st.dataframe(df.head(10), use_container_width=True)
-
-        st.markdown("### Statistiques générales")
-
-        total_produits = len(df)
-        if "DESI_ARTI" in df.columns:
-            uniques = df["DESI_ARTI"].nunique()
-        elif "nom" in df.columns:
-            uniques = df["nom"].nunique()
-        else:
-            uniques = total_produits
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("Nombre total de lignes")
-            st.progress(min(total_produits / 1000, 1.0))  # max 1000 pour l’animation
-            st.metric(label="", value=f"{total_produits} lignes")
-        with col2:
-            st.markdown("Produits uniques")
-            st.progress(min(uniques / 1000, 1.0))
-            st.metric(label="", value=f"{uniques} produits")
-
-        if "famille" in df.columns:
-            st.markdown("### Répartition des familles")
-            famille_counts = df["famille"].value_counts().reset_index()
-            famille_counts.columns = ["famille", "nb_produits"]
-            chart = alt.Chart(famille_counts).mark_bar().encode(
-                x=alt.X('nb_produits:Q', title="Nombre de produits"),
-                y=alt.Y('famille:N', sort='-x', title="Famille"),
-                tooltip=['famille', 'nb_produits']
-            ).properties(width=700, height=400)
-            st.altair_chart(chart, use_container_width=True)
-
-        st.markdown("### Télécharger le jeu de données sélectionné")
-        buffer = io.StringIO()
-        df.to_csv(buffer, index=False, encoding="utf-8-sig")
-        st.download_button("Télécharger en CSV", buffer.getvalue(), file_name="base_selectionnee.csv", mime="text/csv")
+    if len(numeric_cols) >= 1:
+        st.subheader("📊 Comparaison des valeurs numériques (histogramme)")
+        selected_col = st.selectbox("Choisir une colonne numérique à comparer", numeric_cols)
+        fig, ax = plt.subplots()
+        ax.hist(df1[selected_col].dropna(), bins=20, alpha=0.5, label='GPairo')
+        ax.hist(df2[selected_col].dropna(), bins=20, alpha=0.5, label='Webpdrmif')
+        ax.set_title(f"Distribution des valeurs - {selected_col}")
+        ax.legend()
+        st.pyplot(fig)
+    else:
+        st.info("Pas assez de colonnes numériques communes pour tracer un graphique.")
