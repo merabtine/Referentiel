@@ -15,9 +15,8 @@ with col_title:
     st.markdown("## **Référentiel Industriel : Données des pièces de rechange**")
 with col_button:
     if st.button("🔄 Réinitialiser l'application"):
-        for key in st.session_state.keys():
-            del st.session_state[key]
-        st.experimental_rerun()
+       st.session_state.clear()
+       st.experimental_rerun()
 
 st.markdown("---")
 
@@ -62,7 +61,7 @@ def show_file_section(title, side):
                 values="Valeur",
                 names="Type",
                 title=f"📊 Répartition des désignations - {title}",
-                color_discrete_sequence=px.colors.sequential.RdBu,
+                color_discrete_sequence=["#EEEE0E", "#4430DE"],
                 hole=0.4
             )
             side.plotly_chart(fig_pie, use_container_width=True)
