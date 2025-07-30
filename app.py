@@ -67,17 +67,17 @@ def show_file_section(title, side):
             )
             side.plotly_chart(fig_pie, use_container_width=True)
 
-            # 🔶 Bloc HTML stylisé : Statistiques Générales
             side.markdown(f"""
-                <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 6px solid #1f77b4; margin-top: 10px;">
-                    <h4 style="color: #1f77b4;">📌 Statistiques Générales</h4>
-                    <ul style="list-style-type: none; padding-left: 0;">
-                        <li><b>Lignes totales :</b> <span style="color: #333;">{total_lignes:,}</span></li>
-                        <li><b>Produits uniques :</b> <span style="color: #2ca02c;">{produits_uniques:,}</span></li>
-                        <li><b>Duplications détectées :</b> <span style="color: #d62728;">{duplications:,}</span></li>
-                    </ul>
-                </div>
-            """, unsafe_allow_html=True)
+    <div style="background-color: #222; padding: 15px; border-radius: 10px;
+                border-left: 6px solid #1f77b4; margin-top: 10px;">
+        <h4 style="color: #1f77b4;">📌 Statistiques Générales</h4>
+        <ul style="list-style-type: none; padding-left: 0; color: #eee;">
+            <li><b>Lignes totales :</b> {total_lignes:,}</li>
+            <li><b>Produits uniques :</b> <span style="color: #2ca02c;">{produits_uniques:,}</span></li>
+            <li><b>Duplications détectées :</b> <span style="color: #ff4d4d;">{duplications:,}</span></li>
+        </ul>
+    </div>
+""", unsafe_allow_html=True)
 
             # 🔵 Barre de progression (volume de désignations)
             side.markdown("#### 📏 Volume de données")
