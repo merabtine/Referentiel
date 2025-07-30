@@ -7,8 +7,7 @@ import io
 
 st.set_page_config(page_title="Refinor", layout="wide")
 
-# Logo et titre
-logo_path = "logo.png"  # Remplace par le nom réel du fichier logo que tu as
+logo_path = "logo.png"  
 col_logo, col_title = st.columns([1, 5])
 with col_logo:
     st.image(logo_path, width=80)
@@ -29,7 +28,6 @@ def reset_app():
     st.session_state.restarted = True
     st.experimental_rerun()
 
-# Onglet d'import
 tab1, tab2 = st.tabs(["Importer les fichiers", "Explorer les données"])
 
 with tab1:
