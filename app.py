@@ -95,15 +95,56 @@ if page == "Accueil":
             side.plotly_chart(fig_pie, use_container_width=True)
 
             side.markdown(f"""
-                <div style="background-color: var(--bg-color, #f0f2f6); padding: 15px; border-radius: 10px; border-left: 6px solid #1f77b4; margin-top: 10px;">
-                    <h4 style="color: #1f77b4;">📌 Statistiques Générales</h4>
-                    <ul style="list-style-type: none; padding-left: 0;">
-                        <li><b>Lignes totales :</b> {total_lignes:,}</li>
-                        <li><b>Produits uniques :</b> <span style="color: #2ca02c;">{produits_uniques:,}</span></li>
-                        <li><b>Duplications détectées :</b> <span style="color: #ff4d4d;">{duplications:,}</span></li>
-                    </ul>
-                </div>
-            """, unsafe_allow_html=True)
+    <style>
+    /* Fond clair / sombre selon le mode */
+    .stat-box {{
+        padding: 15px; 
+        border-radius: 10px; 
+        border-left: 6px solid #1f77b4; 
+        margin-top: 10px;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+    }}
+    .stat-box h4 {{
+        color: #1f77b4;
+    }}
+    .stat-box ul {{
+        list-style-type: none; 
+        padding-left: 0; 
+    }}
+    .stat-box .unique {{ color: #2ca02c; }}
+    .stat-box .duplication {{ color: #ff4d4d; }}
+    </style>
+
+    <script>
+    // Applique les variables CSS selon le mode Streamlit
+    const root = document.documentElement;
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function setColors(e) {{
+        if (e.matches) {{
+            root.style.setProperty('--bg-color', '#222');
+            root.style.setProperty('--text-color', '#eee');
+        }} else {{
+            root.style.setProperty('--bg-color', '#f0f2f6');
+            root.style.setProperty('--text-color', '#333');
+        }}
+    }}
+
+    setColors(darkModeMediaQuery);
+    darkModeMediaQuery.addEventListener('change', setColors);
+    </script>
+
+    <div class="stat-box">
+        <h4>📌 Statistiques Générales</h4>
+        <ul>
+            <li><b>Lignes totales :</b> {total_lignes:,}</li>
+            <li><b>Produits uniques :</b> <span class="unique">{produits_uniques:,}</span></li>
+            <li><b>Duplications détectées :</b> <span class="duplication">{duplications:,}</span></li>
+        </ul>
+    </div>
+""", unsafe_allow_html=True)
+
 
             side.markdown("#### 📏 Volume de données")
             progress_value = min(total_lignes / 10000, 1.0)
