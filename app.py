@@ -95,15 +95,56 @@ if page == "Accueil":
             side.plotly_chart(fig_pie, use_container_width=True)
 
             side.markdown(f"""
-                <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 6px solid #1f77b4; margin-top: 10px;">
-                    <h4 style="color: #1f77b4;">📌 Statistiques Générales</h4>
-                    <ul style="list-style-type: none; padding-left: 0;">
-                        <li><b>Lignes totales :</b> {total_lignes:,}</li>
-                        <li><b>Produits uniques :</b> <span style="color: #2ca02c;">{produits_uniques:,}</span></li>
-                        <li><b>Duplications détectées :</b> <span style="color: #ff4d4d;">{duplications:,}</span></li>
-                    </ul>
-                </div>
-            """, unsafe_allow_html=True)
+    <style>
+    /* Fond clair / sombre selon le mode */
+    .stat-box {{
+        padding: 15px; 
+        border-radius: 10px; 
+        border-left: 6px solid #1f77b4; 
+        margin-top: 10px;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+    }}
+    .stat-box h4 {{
+        color: #1f77b4;
+    }}
+    .stat-box ul {{
+        list-style-type: none; 
+        padding-left: 0; 
+    }}
+    .stat-box .unique {{ color: #2ca02c; }}
+    .stat-box .duplication {{ color: #ff4d4d; }}
+    </style>
+
+    <script>
+    // Applique les variables CSS selon le mode Streamlit
+    const root = document.documentElement;
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function setColors(e) {{
+        if (e.matches) {{
+            root.style.setProperty('--bg-color', '#222');
+            root.style.setProperty('--text-color', '#eee');
+        }} else {{
+            root.style.setProperty('--bg-color', '#f0f2f6');
+            root.style.setProperty('--text-color', '#333');
+        }}
+    }}
+
+    setColors(darkModeMediaQuery);
+    darkModeMediaQuery.addEventListener('change', setColors);
+    </script>
+
+    <div class="stat-box">
+        <h4>📌 Statistiques Générales</h4>
+        <ul>
+            <li><b>Lignes totales :</b> {total_lignes:,}</li>
+            <li><b>Produits uniques :</b> <span class="unique">{produits_uniques:,}</span></li>
+            <li><b>Duplications détectées :</b> <span class="duplication">{duplications:,}</span></li>
+        </ul>
+    </div>
+""", unsafe_allow_html=True)
+
 
             side.markdown("#### 📏 Volume de données")
             progress_value = min(total_lignes / 10000, 1.0)
@@ -120,77 +161,38 @@ if page == "Accueil":
     # ────────────── Visualisation dataset global backend ──────────────
     if gpairo_ok and webpdrmif_ok:
         st.markdown("---")
-        st.header("📊 Visualisation du résultat après classification")
-        
+        st.header("📊 Visualisation dataset global fusionné")
+
         try:
-            df_global = pd.read_excel("Ref_Gpairo_Webpdrmif.xlsx")
+            df_global = pd.read_csv("Ref_Gpairo_Webpdrmif.xlsx")
             st.subheader("🔍 Aperçu des premières lignes du résultat")
             st.dataframe(df_global.head(30), use_container_width=True)
-            col1, col2 = st.columns(2)
 
-            # ── Diagramme en anneau (à gauche)
-            with col1:
-                base_counts = df_global['BASE'].value_counts()
-                total_lignes = len(df_global)
-                fig_donut = px.pie(
-                    base_counts,
-                    names=base_counts.index,
-                    values=base_counts.values,
-                    color_discrete_sequence=["#EEEE0E", "#4430DE"],
-                    hole=0.6,
-                    title="Répartition des lignes par BASE"
-                )
-                fig_donut.update_layout(
-                    annotations=[dict(
-                        text=f'Total<br>{total_lignes:,}', 
-                        x=0.5, y=0.5, font_size=20, showarrow=False
-                    )]
-                )
-                st.plotly_chart(fig_donut, use_container_width=True)
+            base_counts = df_global['BASE'].value_counts()
+            total_lignes = len(df_global)
+            fig_donut = px.pie(
+                base_counts,
+                names=base_counts.index,
+                values=base_counts.values,
+                color_discrete_sequence=["#EEEE0E", "#4430DE"],
+                hole=0.6,
+                title="Répartition des lignes par BASE"
+            )
+            fig_donut.update_layout(
+                annotations=[dict(text=f'Total<br>{total_lignes:,}', x=0.5, y=0.5, font_size=20, showarrow=False)]
+            )
+            st.plotly_chart(fig_donut, use_container_width=True)
 
-            # ── Diagramme en barres (à droite)
-            with col2:
-                nb_familles = df_global['FAMILLE'].nunique()
-                nb_sous_familles = df_global['SOUS_FAMILLE'].nunique()
-                nb_agregats = df_global['AGREGAT'].nunique()
-                nb_produits = df_global['NOM PRODUIT'].nunique()
-
-                stats_cat = pd.DataFrame({
-                    "Catégorie": ["Familles", "Sous-familles", "Agrégats", "Produits"],
-                    "Nombre": [nb_familles, nb_sous_familles, nb_agregats, nb_produits]
-                })
-
-                fig_bar = px.bar(
-                    stats_cat,
-                    x="Catégorie",
-                    y="Nombre",
-                    color="Catégorie",
-                    text="Nombre",
-                    title="Nombre d’éléments distincts par catégorie",
-                    color_discrete_sequence=["#fda558", "#7dec7d", "#61a4d4", "#ea7bef"]
-                )
-                fig_bar.update_layout(showlegend=False)
-                fig_bar.update_traces(textposition="outside")
-                st.plotly_chart(fig_bar, use_container_width=True)
-
-            # ── Bouton de téléchargement
             csv = df_global.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
-                label="📥 Télécharger dataset global fusionné (CSV)",
+                label="Télécharger dataset global fusionné (CSV)",
                 data=csv,
                 file_name="dataset_gpairo_webpdrmif.csv",
                 mime="text/csv"
             )
-
         except Exception as e:
-            st.error(f"❌ Erreur lors du chargement du dataset global backend : {e}")
+            st.error(f"Erreur lors du chargement du dataset global backend : {e}")
     else:
         st.info("⚠️ Importez les deux fichiers Gpairo et Webpdrmif pour visualiser le dataset global fusionné.")
 
-elif page == "API Models Overview":
-    st.header("Présentation des modèles AI et APIs")
-    st.markdown("Contenu à venir (OpenRouter, Together AI, etc.)")
-
-else:
-    st.header("Autre rubrique")
-    st.write("Contenu à définir")
+st.write("Contenu à définir")
