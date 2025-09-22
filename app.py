@@ -2,219 +2,115 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
+# ────────────── CONFIG ──────────────
 st.set_page_config(
     page_title="Référentiel Industriel",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# ────────────── Header (logo + titre) ──────────────
-col_logo, col_title = st.columns([1, 4])
-with col_logo:
-    st.image("logo.png", width=130)
-with col_title:
-    st.markdown("## **Référentiel Industriel : Données des pièces de rechange**")
+# ────────────── TITRE & DESCRIPTION ──────────────
+st.title("⚙️ Référentiel Industriel – Tableau des pièces de rechange")
+st.markdown("""
+Bienvenue sur **REFINOR** – votre tableau de bord interactif pour les **produits industriels et pièces de rechange**.  
+Toutes les données affichées ci-dessous proviennent de votre **système backend** (fichier déjà nettoyé et classifié).  
+""")
 
-# ────────────── Barre de navigation ──────────────
-page = st.radio(
+# ────────────── SIDEBAR MODERNE ──────────────
+st.sidebar.image("logo.png", width=140)
+st.sidebar.markdown("## Menu")
+page = st.sidebar.selectbox(
     "Navigation",
-    options=["Accueil", "API Models Overview", "Autre rubrique"],
-    horizontal=True
+    ["📊 Tableau & Statistiques", "📈 Analyses interactives"]
 )
 
-if page == "Accueil":
-    # ────────────── Overview et description ──────────────
-    st.markdown("---")
-    st.header("Bienvenue dans REFINOR: Le Référentiel Industriel")
+# ────────────── LECTURE FICHIER BACKEND ──────────────
+# Ton fichier résultat déjà prêt :
+fichier_resultat = "resultat_classification.xlsx"
 
-    st.markdown("""
-    Cette application permet de **nettoyer**, **classer** et **analyser** des bases de données industrielles de pièces de rechange, 
-    notamment pour des installations fixes et du matériel roulant.
-    
-    **Objectifs principaux :**
-    
-    1. **Nettoyage des désignations brutes**  
-       - Correction orthographique et harmonisation des termes  
-       - Normalisation pour garantir la cohérence des catégories  
-       
-    2. **Classification hiérarchique**  
-       Chaque produit est classé selon quatre champs obligatoires :  
-       - **Famille** (catégorie générale, ex: mécanique, électrique)  
-       - **Sous-famille** (regroupement large, ex: outils, connecteurs)  
-       - **Agrégat** (regroupement plus spécifique dérivé du nom du produit)  
-       - **Nom** (désignation nettoyée, produit individuel)  
-    """)
+try:
+    df = pd.read_excel(fichier_resultat)
+except Exception as e:
+    st.error(f"Impossible de lire le fichier résultat : {e}")
+    st.stop()
 
-    st.markdown("---")
+# ────────────── PAGE 1 : TABLEAU + STATS ──────────────
+if page == "📊 Tableau & Statistiques":
+    st.subheader("📑 Aperçu du fichier résultat classifié")
+    st.dataframe(df.head(50), use_container_width=True)
 
-    # ────────────── Upload et traitement fichiers ──────────────
-    st.subheader("Importer vos fichiers de données")
-    left, right = st.columns(2)
+    # Petit rappel des colonnes :
+    colonnes = df.columns.tolist()
+    st.caption(f"Colonnes disponibles : {', '.join(colonnes)}")
 
-    def show_file_section(title, side):
-        uploaded_file = side.file_uploader(f"📂 Importer {title}", type=["csv", "xlsx"], key=title)
-        if uploaded_file is None:
-            st.session_state[f"{title}_uploaded"] = False
-            return False
+    # Statistiques globales
+    total_lignes = len(df)
+    nb_sous_familles = df['SOUS_FAMILLE'].nunique()
+    nb_agregats = df['AGREGAT'].nunique()
+    nb_produits = df['NOM PRODUIT'].nunique()
 
-        try:
-            if uploaded_file.name.endswith('.csv'):
-                df = pd.read_csv(uploaded_file)
-            else:
-                df = pd.read_excel(uploaded_file)
-        except Exception as e:
-            side.error(f"Erreur de lecture du fichier : {e}")
-            st.session_state[f"{title}_uploaded"] = False
-            return False
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Lignes totales", f"{total_lignes:,}")
+    col2.metric("Sous-familles uniques", f"{nb_sous_familles:,}")
+    col3.metric("Agrégats uniques", f"{nb_agregats:,}")
+    col4.metric("Produits uniques", f"{nb_produits:,}")
 
-        side.success(f"Fichier {title} chargé avec succès ✅")
+    # Téléchargement CSV
+    csv = df.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(
+        "💾 Télécharger le fichier résultat (CSV)",
+        data=csv,
+        file_name="resultat_classification.csv",
+        mime="text/csv"
+    )
 
-        # Aperçu
-        with side.expander("🧾 Aperçu des données", expanded=True):
-            side.dataframe(df.head(20), use_container_width=True)
+# ────────────── PAGE 2 : ANALYSES INTERACTIVES ──────────────
+elif page == "📈 Analyses interactives":
+    st.subheader("Analyses interactives par Sous-famille / Agrégat / Produits")
 
-        # Statistiques
-        if "DESI_ARTI" in df.columns:
-            total_lignes = len(df)
-            df_cleaned = df['DESI_ARTI'].dropna().str.strip().str.lower()
-            produits_uniques = df_cleaned.nunique()
-            duplications = total_lignes - produits_uniques
+    # Choix sous-famille
+    sous_familles = sorted(df['SOUS_FAMILLE'].dropna().unique())
+    selected_sous_famille = st.selectbox("🔎 Choisir une sous-famille :", ["(Toutes)"] + sous_familles)
 
-            stats_df = pd.DataFrame({
-                "Type": ["Produits uniques", "Duplications"],
-                "Valeur": [produits_uniques, duplications]
-            })
-
-            fig_pie = px.pie(
-                stats_df,
-                values="Valeur",
-                names="Type",
-                title=f"📊 Répartition des désignations - {title}",
-                color_discrete_sequence=["#EEEE0E", "#4430DE"],
-                hole=0.4
-            )
-            side.plotly_chart(fig_pie, use_container_width=True)
-
-            side.markdown(f"""
-    <style>
-    .stat-box {{
-        padding: 15px; 
-        border-radius: 10px; 
-        border-left: 6px solid #1f77b4; 
-        margin-top: 10px;
-        background-color: var(--bg-color);
-        color: var(--text-color);
-    }}
-    .stat-box h4 {{ color: #1f77b4; }}
-    .stat-box ul {{ list-style-type: none; padding-left: 0; }}
-    .stat-box .unique {{ color: #2ca02c; }}
-    .stat-box .duplication {{ color: #ff4d4d; }}
-    </style>
-    <script>
-    const root = document.documentElement;
-    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    function setColors(e) {{
-        if (e.matches) {{
-            root.style.setProperty('--bg-color', '#222');
-            root.style.setProperty('--text-color', '#eee');
-        }} else {{
-            root.style.setProperty('--bg-color', '#f0f2f6');
-            root.style.setProperty('--text-color', '#333');
-        }}
-    }}
-    setColors(darkModeMediaQuery);
-    darkModeMediaQuery.addEventListener('change', setColors);
-    </script>
-    <div class="stat-box">
-        <h4>📌 Statistiques Générales</h4>
-        <ul>
-            <li><b>Lignes totales :</b> {total_lignes:,}</li>
-            <li><b>Produits uniques :</b> <span class="unique">{produits_uniques:,}</span></li>
-            <li><b>Duplications détectées :</b> <span class="duplication">{duplications:,}</span></li>
-        </ul>
-    </div>
-""", unsafe_allow_html=True)
-
-            side.markdown("#### 📏 Volume de données")
-            progress_value = min(total_lignes / 10000, 1.0)
-            side.progress(progress_value, text=f"{total_lignes:,} désignations brutes")
-        else:
-            side.warning("⚠️ La colonne 'DESI_ARTI' est introuvable dans ce fichier.")
-
-        st.session_state[f"{title}_uploaded"] = True
-        return True
-
-    gpairo_ok = show_file_section("Gpairo", left)
-    webpdrmif_ok = show_file_section("Webpdrmif", right)
-
-    # ────────────── Visualisation dataset global backend ──────────────
-    if gpairo_ok and webpdrmif_ok:
-        st.markdown("---")
-        st.header("📊 Visualisation dataset global fusionné")
-
-        try:
-            df_global = pd.read_excel("Ref_Gpairo_Webpdrmif.xlsx")
-            st.subheader("🔍 Aperçu des premières lignes du résultat")
-            st.dataframe(df_global.head(30), use_container_width=True)
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                base_counts = df_global['BASE'].value_counts()
-                total_lignes = len(df_global)
-                fig_donut = px.pie(
-                    base_counts,
-                    names=base_counts.index,
-                    values=base_counts.values,
-                    color_discrete_sequence=["#EEEE0E", "#4430DE"],
-                    hole=0.6,
-                    title="Répartition des lignes par BASE"
-                )
-                fig_donut.update_layout(
-                    annotations=[dict(text=f'Total<br>{total_lignes:,}', x=0.5, y=0.5, font_size=20, showarrow=False)]
-                )
-                st.plotly_chart(fig_donut, use_container_width=True)
-
-            with col2:
-                nb_familles = df_global['FAMILLE'].nunique()
-                nb_sous_familles = df_global['SOUS_FAMILLE'].nunique()
-                nb_agregats = df_global['AGREGAT'].nunique()
-                nb_produits = df_global['NOM PRODUIT'].nunique()
-
-                stats_cat = pd.DataFrame({
-                    "Catégorie": ["Familles", "Sous-familles", "Agrégats", "Produits"],
-                    "Nombre": [nb_familles, nb_sous_familles, nb_agregats, nb_produits]
-                })
-
-                fig_bar = px.bar(
-                    stats_cat,
-                    x="Catégorie",
-                    y="Nombre",
-                    color="Catégorie",
-                    text="Nombre",
-                    title="Nombre d’éléments distincts par catégorie",
-                    color_discrete_sequence=["#fda558", "#7dec7d", "#61a4d4", "#ea7bef"]
-                )
-                fig_bar.update_layout(showlegend=False)
-                fig_bar.update_traces(textposition="outside")
-                st.plotly_chart(fig_bar, use_container_width=True)
-
-            csv = df_global.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="Télécharger dataset global fusionné (CSV)",
-                data=csv,
-                file_name="dataset_gpairo_webpdrmif.csv",
-                mime="text/csv"
-            )
-
-        except Exception as e:
-            st.error(f"Erreur lors du chargement du dataset global backend : {e}")
+    if selected_sous_famille != "(Toutes)":
+        df_filtered = df[df['SOUS_FAMILLE'] == selected_sous_famille]
     else:
-        st.info("⚠️ Importez les deux fichiers Gpairo et Webpdrmif pour visualiser le dataset global fusionné.")
+        df_filtered = df.copy()
 
-elif page == "API Models Overview":
-    st.header("Présentation des modèles AI et APIs")
-    st.markdown("Contenu à venir (OpenRouter, Together AI, etc.)")
+    # Graph 1 : Répartition des agrégats dans la sous-famille
+    agg_counts = df_filtered['AGREGAT'].value_counts().reset_index()
+    agg_counts.columns = ['AGREGAT', 'Nombre']
 
-else:
-    st.header("Autre rubrique")
-    st.write("Contenu à définir")
+    fig_bar = px.bar(
+        agg_counts,
+        x='AGREGAT',
+        y='Nombre',
+        text='Nombre',
+        title="Répartition des agrégats",
+        color='AGREGAT',
+        color_discrete_sequence=px.colors.qualitative.Set3
+    )
+    fig_bar.update_traces(textposition='outside')
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+    # Graph 2 : Top produits de l’agrégat choisi
+    agregats = sorted(df_filtered['AGREGAT'].dropna().unique())
+    selected_agregat = st.selectbox("Choisir un agrégat :", ["(Tous)"] + agregats)
+
+    if selected_agregat != "(Tous)":
+        df_agregat = df_filtered[df_filtered['AGREGAT'] == selected_agregat]
+    else:
+        df_agregat = df_filtered.copy()
+
+    produits_counts = df_agregat['NOM PRODUIT'].value_counts().head(20).reset_index()
+    produits_counts.columns = ['NOM PRODUIT', 'Nombre']
+
+    fig_treemap = px.treemap(
+        produits_counts,
+        path=['NOM PRODUIT'],
+        values='Nombre',
+        title="Top 20 produits"
+    )
+    st.plotly_chart(fig_treemap, use_container_width=True)
+
+    st.dataframe(df_agregat.head(30), use_container_width=True)
