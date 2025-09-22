@@ -8,29 +8,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# ────────────── HEADER ──────────────
-st.markdown("""
-<style>
-.header {
-    background: linear-gradient(90deg, #0d47a1, #1976d2);
-    padding: 1rem 2rem;
-    border-radius: 0.5rem;
-    color: white;
-    font-size: 1.5rem;
-}
-</style>
-<div class="header">⚙️ REFINOR – Tableau de bord interactif des pièces industrielles</div>
-""", unsafe_allow_html=True)
-
-# ────────────── DESCRIPTION ──────────────
-st.markdown("""
-Bienvenue sur **REFINOR** – votre **tableau de bord interactif** pour le référentiel industriel des pièces de rechange.  
-Cet outil vous permet de **charger votre base Gpairo**, de **visualiser instantanément le fichier nettoyé et classifié**  
-et d’analyser vos données par **sous-familles**, **agrégats** et **produits** grâce à des graphes modernes et interactifs.  
-""")
-
-# ────────────── UPLOAD GP AIRO ──────────────
+# ────────────── IMAGE HEADER ──────────────
+st.image("header.png", use_container_width=True)
+# ────────────── UPLOAD GPAIRO ──────────────
 st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("## Importer votre base Gpairo")
 uploaded_file = st.sidebar.file_uploader("📂 Importer le fichier Gpairo", type=["csv", "xlsx"])
