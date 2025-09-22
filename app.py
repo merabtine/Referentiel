@@ -122,5 +122,59 @@ if uploaded_file is not None:
     st.markdown("### 📝 Aperçu des données filtrées")
     st.dataframe(df_agregat.head(30), use_container_width=True)
 
+# --- Exploration visuelle ---
+st.markdown("---")
+st.subheader("🗂️ Exploration des produits")
+
+if uploaded_file is not None:
+    grouped = df.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
+
+    if 'selected_agr' not in st.session_state:
+        st.session_state.selected_agr = None
+
+    # On crée des cartes Streamlit par sous-famille
+    for _, row in grouped.iterrows():
+        sousfam = row['SOUS_FAMILLE']
+        ags = row['AGREGAT']
+
+        with st.container():
+            st.markdown(
+                f"<div style='background-color:#f8f9fa;"
+                f"border-radius:10px;padding:1rem;"
+                f"box-shadow:0 4px 6px rgba(0,0,0,0.1);'>"
+                f"<h4 style='color:#023047;'>{sousfam}</h4></div>",
+                unsafe_allow_html=True
+            )
+            # Les agrégats sous forme de colonnes de boutons
+            cols = st.columns(4)  # 4 boutons par ligne
+            i = 0
+            for agr in ags:
+                if cols[i % 4].button(agr, key=f"{sousfam}_{agr}"):
+                    st.session_state.selected_agr = agr
+                i += 1
+            st.markdown("")  # espace
+
+    # Afficher top produits si un agrégat est cliqué
+    if st.session_state.selected_agr:
+        st.markdown(f"### 🔎 Top produits pour l’agrégat **{st.session_state.selected_agr}**")
+        top_produits = (
+            df[df['AGREGAT'] == st.session_state.selected_agr]['NOM PRODUIT']
+            .value_counts()
+            .head(5)
+            .reset_index()
+        )
+        top_produits.columns = ['NOM PRODUIT', 'Nombre']
+        st.table(top_produits)
+
+        if st.button("Voir plus"):
+            all_produits = (
+                df[df['AGREGAT'] == st.session_state.selected_agr]['NOM PRODUIT']
+                .value_counts()
+                .reset_index()
+            )
+            all_produits.columns = ['NOM PRODUIT', 'Nombre']
+            st.dataframe(all_produits, use_container_width=True)
+
+
 else:
     st.info("Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
