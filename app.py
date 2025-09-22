@@ -9,34 +9,71 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ────────────── HEADER ──────────────
+# ────────────── STYLE GLOBAL ──────────────
 st.markdown("""
 <style>
-.header {
-    background: linear-gradient(90deg, #0d47a1, #1976d2);
-    padding: 1rem 2rem;
-    border-radius: 0.5rem;
+/* Police et couleurs globales */
+body, .stApp {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f9f9f9;
+}
+
+/* HEADER */
+.hero {
+    background: linear-gradient(135deg, #002366 0%, #0b3a91 100%);
     color: white;
-    font-size: 1.5rem;
+    padding: 2.5rem;
+    text-align: center;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+.hero h1 {
+    font-size: 2.4rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+.hero p {
+    font-size: 1.2rem;
+    opacity: 0.95;
+}
+
+/* Boutons download */
+.stDownloadButton button {
+    background-color: #F0B518;
+    color: black;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* Filtres alignés */
+.filter-box {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+.filter-box > div {
+    flex: 1;
 }
 </style>
-<div class="header">⚙️ REFINOR – Tableau de bord interactif des pièces industrielles</div>
 """, unsafe_allow_html=True)
 
-# ────────────── DESCRIPTION ──────────────
+# ────────────── HEADER ──────────────
 st.markdown("""
-Bienvenue sur **REFINOR** – votre **tableau de bord interactif** pour le référentiel industriel des pièces de rechange.  
-Cet outil vous permet de **charger votre base Gpairo**, de **visualiser instantanément le fichier nettoyé et classifié**  
-et d’analyser vos données par **sous-familles**, **agrégats** et **produits** grâce à des graphes modernes et interactifs.  
-""")
+<div class="hero">
+  <h1>⚙️ REFINOR</h1>
+  <p>Tableau de bord interactif du <b>référentiel industriel</b>  
+  pour vos <b>pièces de rechange</b></p>
+</div>
+""", unsafe_allow_html=True)
 
-# ────────────── UPLOAD GP AIRO ──────────────
+# ────────────── SIDEBAR ──────────────
 st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("## Importer votre base Gpairo")
 uploaded_file = st.sidebar.file_uploader("📂 Importer le fichier Gpairo", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
-    # Lecture fichier Gpairo (pour l'exemple on lit directement le résultat backend)
+    # Lecture du fichier importé
     try:
         if uploaded_file.name.endswith(".csv"):
             df_input = pd.read_csv(uploaded_file)
@@ -47,15 +84,14 @@ if uploaded_file is not None:
         st.error(f"Erreur de lecture du fichier : {e}")
         st.stop()
 
-    # Ici tu peux appeler ton backend pour générer le résultat
-    # Pour l'exemple, on suppose que resultat_classification.xlsx existe déjà :
+    # Charger le résultat backend
     try:
         df = pd.read_excel("resultat_classification.xlsx")
     except Exception as e:
         st.error(f"Impossible de lire le fichier résultat : {e}")
         st.stop()
 
-    # ────────────── STATISTIQUES GLOBALES ──────────────
+    # ────────────── STATISTIQUES ──────────────
     total_lignes = len(df)
     nb_sous_familles = df['SOUS_FAMILLE'].nunique()
     nb_agregats = df['AGREGAT'].nunique()
@@ -82,18 +118,22 @@ if uploaded_file is not None:
     st.markdown("---")
     st.subheader("📊 Dashboard interactif")
 
-    # ────────────── FILTRES ──────────────
+    # ────────────── FILTRES MODERNES ──────────────
     sous_familles = sorted(df['SOUS_FAMILLE'].dropna().unique())
-    selected_sous_famille = st.selectbox("🔎 Choisir une sous-famille :", ["(Toutes)"] + sous_familles)
+    agregats_total = sorted(df['AGREGAT'].dropna().unique())
 
+    # deux selectbox côte à côte
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        selected_sous_famille = st.selectbox("🔎 Sous-famille :", ["(Toutes)"] + sous_familles)
+    with col_f2:
+        selected_agregat = st.selectbox("🔧 Agrégat :", ["(Tous)"] + agregats_total)
+
+    # filtre
     if selected_sous_famille != "(Toutes)":
         df_filtered = df[df['SOUS_FAMILLE'] == selected_sous_famille]
     else:
         df_filtered = df.copy()
-
-    # Agrégats disponibles
-    agregats = sorted(df_filtered['AGREGAT'].dropna().unique())
-    selected_agregat = st.selectbox("Choisir un agrégat :", ["(Tous)"] + agregats)
 
     if selected_agregat != "(Tous)":
         df_agregat = df_filtered[df_filtered['AGREGAT'] == selected_agregat]
@@ -101,7 +141,7 @@ if uploaded_file is not None:
         df_agregat = df_filtered.copy()
 
     # ────────────── GRAPHIQUES ──────────────
-    # Graph 1 : répartition agrégats
+    # Répartition des agrégats
     agg_counts = df_filtered['AGREGAT'].value_counts().reset_index()
     agg_counts.columns = ['AGREGAT', 'Nombre']
 
@@ -110,14 +150,14 @@ if uploaded_file is not None:
         x='AGREGAT',
         y='Nombre',
         text='Nombre',
-        title="Répartition des agrégats dans la sous-famille sélectionnée",
+        title="Répartition des agrégats",
         color='AGREGAT',
-        color_discrete_sequence=px.colors.qualitative.Set3
+        color_discrete_sequence=[ '#002366', '#F0B518', '#0b3a91', '#ffa500' ]
     )
     fig_bar.update_traces(textposition='outside')
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Graph 2 : Top produits
+    # Top produits
     produits_counts = df_agregat['NOM PRODUIT'].value_counts().head(20).reset_index()
     produits_counts.columns = ['NOM PRODUIT', 'Nombre']
 
@@ -125,13 +165,13 @@ if uploaded_file is not None:
         produits_counts,
         path=['NOM PRODUIT'],
         values='Nombre',
-        title="Top 20 produits de l’agrégat sélectionné"
+        title="Top 20 produits"
     )
+    fig_treemap.update_traces(root_color="#002366")
     st.plotly_chart(fig_treemap, use_container_width=True)
 
-    # Aperçu des données filtrées
     st.markdown("### 📝 Aperçu des données filtrées")
     st.dataframe(df_agregat.head(30), use_container_width=True)
 
 else:
-    st.info("Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
+    st.info("📂 Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
