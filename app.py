@@ -9,99 +9,25 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ────────────── CSS GLOBAL ──────────────
-st.markdown("""
-<style>
-/* HEADER avec image */
-.header {
-    position: relative;
-    background-image: url('pieces-de-rechange.jpg');
-    background-size: cover;
-    background-position: center;
-    border-radius: 0.8rem;
-    height: 260px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.header-overlay {
-    background: rgba(2,48,71,0.6); /* overlay foncé */
-    border-radius: 0.8rem;
-    width: 100%;
-    height: 100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-.header-text {
-    color: #fff;
-    font-size: 2rem;
-    font-weight: 700;
-    text-align: center;
-}
-
-/* Stats animées */
-.stat-card {
-    background: linear-gradient(145deg, #8ecae6, #219ebc);
-    color: white;
-    border-radius: 50%;
-    width: 120px;
-    height: 120px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin: auto;
-    transition: transform 0.3s ease-in-out;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-.stat-card:hover {
-    transform: scale(1.1);
-}
-.stat-number {
-    font-size: 1.3rem;
-    font-weight: bold;
-}
-.stat-label {
-    font-size: 0.8rem;
-}
-
-/* Select sur une seule ligne */
-.filter-container {
-    display: flex;
-    gap: 2rem;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ────────────── HEADER ──────────────
 st.markdown("""
-<div class="header">
-  <div class="header-overlay">
-    <div class="header-text"> 
-    <h1> REFINOR – </h1>
-    <p>Votre plateforme moderne pour charger, nettoyer et analyser vos données industrielles  
-    </p>
-    </div>
-            
-  </div>
-</div>
+<style>
+.header {
+    background: linear-gradient(90deg, #0d47a1, #1976d2);
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    color: white;
+    font-size: 1.5rem;
+}
+</style>
+<div class="header">⚙️ REFINOR – Tableau de bord interactif des pièces industrielles</div>
 """, unsafe_allow_html=True)
 
 # ────────────── DESCRIPTION ──────────────
 st.markdown("""
-Dans un contexte marqué par la **transformation numérique** et la multiplication des solutions logicielles,  
-les entreprises modernes s’appuient sur des systèmes d’information de plus en plus complexes pour piloter leurs activités.  
-
-La capacité à **collecter**, **centraliser** et **analyser efficacement** les données constitue aujourd’hui un facteur stratégique de compétitivité.  
-Les **référentiels produits** occupent une place essentielle car ils assurent la **cohérence** et la **fiabilité** des informations au sein des différentes applications et départements.  
-
-**REFINOR** a pour objectif de mettre en place un mécanisme capable :  
-- d’**assainir et normaliser** les désignations produits,  
-- de **regrouper** les entrées similaires malgré les variations de saisie,  
-- de **classifier** chaque produit selon une hiérarchie normalisée : **Famille → Sous-famille → Agrégat → Produit**.  
-
-Grâce à ce tableau de bord, vous pouvez **visualiser instantanément** vos données et les **analyser de manière interactive**.
+Bienvenue sur **REFINOR** – votre **tableau de bord interactif** pour le référentiel industriel des pièces de rechange.  
+Cet outil vous permet de **charger votre base Gpairo**, de **visualiser instantanément le fichier nettoyé et classifié**  
+et d’analyser vos données par **sous-familles**, **agrégats** et **produits** grâce à des graphes modernes et interactifs.  
 """)
 
 # ────────────── UPLOAD GP AIRO ──────────────
@@ -122,6 +48,7 @@ if uploaded_file is not None:
         st.stop()
 
     # Ici tu peux appeler ton backend pour générer le résultat
+    # Pour l'exemple, on suppose que resultat_classification.xlsx existe déjà :
     try:
         df = pd.read_excel("resultat_classification.xlsx")
     except Exception as e:
@@ -135,34 +62,10 @@ if uploaded_file is not None:
     nb_produits = df['NOM PRODUIT'].nunique()
 
     c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{total_lignes:,}</div>
-            <div class="stat-label">Lignes</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{nb_sous_familles:,}</div>
-            <div class="stat-label">Sous-familles</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{nb_agregats:,}</div>
-            <div class="stat-label">Agrégats</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c4:
-        st.markdown(f"""
-        <div class="stat-card">
-            <div class="stat-number">{nb_produits:,}</div>
-            <div class="stat-label">Produits</div>
-        </div>
-        """, unsafe_allow_html=True)
+    c1.metric("📄 Lignes totales", f"{total_lignes:,}")
+    c2.metric("📂 Sous-familles", f"{nb_sous_familles:,}")
+    c3.metric("🔧 Agrégats", f"{nb_agregats:,}")
+    c4.metric("🛒 Produits", f"{nb_produits:,}")
 
     st.markdown("---")
     st.subheader("📑 Aperçu du fichier résultat classifié")
@@ -179,25 +82,28 @@ if uploaded_file is not None:
     st.markdown("---")
     st.subheader("📊 Dashboard interactif")
 
-    # ────────────── FILTRES SUR UNE LIGNE ──────────────
-    sous_familles = sorted(df['SOUS_FAMILLE'].dropna().unique())
-    agregats = sorted(df['AGREGAT'].dropna().unique())
-
+    # ────────────── FILTRES SUR UNE MÊME LIGNE ──────────────
     col1, col2 = st.columns(2)
-    with col1:
-        selected_sous_famille = st.selectbox("🔎 Choisir une sous-famille :", ["(Toutes)"] + sous_familles)
-    with col2:
-        selected_agregat = st.selectbox("Choisir un agrégat :", ["(Tous)"] + agregats)
 
-    df_filtered = df.copy()
+    sous_familles = sorted(df['SOUS_FAMILLE'].dropna().unique())
+    selected_sous_famille = col1.selectbox("🔎 Choisir une sous-famille :", ["(Toutes)"] + sous_familles)
+
     if selected_sous_famille != "(Toutes)":
-        df_filtered = df_filtered[df_filtered['SOUS_FAMILLE'] == selected_sous_famille]
+        df_filtered = df[df['SOUS_FAMILLE'] == selected_sous_famille]
+    else:
+        df_filtered = df.copy()
 
-    df_agregat = df_filtered.copy()
+    # Agrégats disponibles
+    agregats = sorted(df_filtered['AGREGAT'].dropna().unique())
+    selected_agregat = col2.selectbox("Choisir un agrégat :", ["(Tous)"] + agregats)
+
     if selected_agregat != "(Tous)":
-        df_agregat = df_agregat[df_agregat['AGREGAT'] == selected_agregat]
+        df_agregat = df_filtered[df_filtered['AGREGAT'] == selected_agregat]
+    else:
+        df_agregat = df_filtered.copy()
 
     # ────────────── GRAPHIQUES ──────────────
+    # Graph 1 : répartition agrégats
     agg_counts = df_filtered['AGREGAT'].value_counts().reset_index()
     agg_counts.columns = ['AGREGAT', 'Nombre']
 
@@ -212,17 +118,27 @@ if uploaded_file is not None:
     fig_bar.update_traces(textposition='outside')
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    produits_counts = df_agregat['NOM PRODUIT'].value_counts().head(20).reset_index()
+    # Graph 2 : Top produits (limite 20 mais gère les cas <20)
+    produits_counts = (
+        df_agregat['NOM PRODUIT']
+        .value_counts()
+        .head(20)  # si <20, renvoie juste ce qu'il y a
+        .reset_index()
+    )
     produits_counts.columns = ['NOM PRODUIT', 'Nombre']
 
-    fig_treemap = px.treemap(
-        produits_counts,
-        path=['NOM PRODUIT'],
-        values='Nombre',
-        title="Top 20 produits de l’agrégat sélectionné"
-    )
-    st.plotly_chart(fig_treemap, use_container_width=True)
+    if not produits_counts.empty:
+        fig_treemap = px.treemap(
+            produits_counts,
+            path=['NOM PRODUIT'],
+            values='Nombre',
+            title="Top produits de l’agrégat sélectionné"
+        )
+        st.plotly_chart(fig_treemap, use_container_width=True)
+    else:
+        st.info("Aucun produit disponible pour l’agrégat sélectionné.")
 
+    # Aperçu des données filtrées
     st.markdown("### 📝 Aperçu des données filtrées")
     st.dataframe(df_agregat.head(30), use_container_width=True)
 
