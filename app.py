@@ -9,71 +9,108 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ────────────── STYLE GLOBAL ──────────────
+# ────────────── CSS GLOBAL ──────────────
 st.markdown("""
 <style>
-/* Police et couleurs globales */
-body, .stApp {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #f9f9f9;
+/* HEADER avec image */
+.header {
+    position: relative;
+    background-image: url('pieces-de-rechange.jpg');
+    background-size: cover;
+    background-position: center;
+    border-radius: 0.8rem;
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-
-/* HEADER */
-.hero {
-    background: linear-gradient(135deg, #002366 0%, #0b3a91 100%);
-    color: white;
-    padding: 2.5rem;
-    text-align: center;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
+.header-overlay {
+    background: rgba(2,48,71,0.6); /* overlay foncé */
+    border-radius: 0.8rem;
+    width: 100%;
+    height: 100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
 }
-.hero h1 {
-    font-size: 2.4rem;
-    margin-bottom: 0.5rem;
+.header-text {
+    color: #fff;
+    font-size: 2rem;
     font-weight: 700;
-}
-.hero p {
-    font-size: 1.2rem;
-    opacity: 0.95;
+    text-align: center;
 }
 
-/* Boutons download */
-.stDownloadButton button {
-    background-color: #F0B518;
-    color: black;
-    border-radius: 8px;
-    font-weight: 600;
+/* Stats animées */
+.stat-card {
+    background: linear-gradient(145deg, #8ecae6, #219ebc);
+    color: white;
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    transition: transform 0.3s ease-in-out;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.stat-card:hover {
+    transform: scale(1.1);
+}
+.stat-number {
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+.stat-label {
+    font-size: 0.8rem;
 }
 
-/* Filtres alignés */
-.filter-box {
+/* Select sur une seule ligne */
+.filter-container {
     display: flex;
     gap: 2rem;
-    justify-content: center;
-    margin-bottom: 1.5rem;
-}
-.filter-box > div {
-    flex: 1;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ────────────── HEADER ──────────────
 st.markdown("""
-<div class="hero">
-  <h1>⚙️ REFINOR</h1>
-  <p>Tableau de bord interactif du <b>référentiel industriel</b>  
-  pour vos <b>pièces de rechange</b></p>
+<div class="header">
+  <div class="header-overlay">
+    <div class="header-text"> 
+    <h1> REFINOR – </h1>
+    <p>Votre plateforme moderne pour charger, nettoyer et analyser vos données industrielles  
+    </p>
+    </div>
+            
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ────────────── SIDEBAR ──────────────
+# ────────────── DESCRIPTION ──────────────
+st.markdown("""
+Dans un contexte marqué par la **transformation numérique** et la multiplication des solutions logicielles,  
+les entreprises modernes s’appuient sur des systèmes d’information de plus en plus complexes pour piloter leurs activités.  
+
+La capacité à **collecter**, **centraliser** et **analyser efficacement** les données constitue aujourd’hui un facteur stratégique de compétitivité.  
+Les **référentiels produits** occupent une place essentielle car ils assurent la **cohérence** et la **fiabilité** des informations au sein des différentes applications et départements.  
+
+**REFINOR** a pour objectif de mettre en place un mécanisme capable :  
+- d’**assainir et normaliser** les désignations produits,  
+- de **regrouper** les entrées similaires malgré les variations de saisie,  
+- de **classifier** chaque produit selon une hiérarchie normalisée : **Famille → Sous-famille → Agrégat → Produit**.  
+
+Grâce à ce tableau de bord, vous pouvez **visualiser instantanément** vos données et les **analyser de manière interactive**.
+""")
+
+# ────────────── UPLOAD GP AIRO ──────────────
 st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("## Importer votre base Gpairo")
 uploaded_file = st.sidebar.file_uploader("📂 Importer le fichier Gpairo", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
-    # Lecture du fichier importé
+    # Lecture fichier Gpairo (pour l'exemple on lit directement le résultat backend)
     try:
         if uploaded_file.name.endswith(".csv"):
             df_input = pd.read_csv(uploaded_file)
@@ -84,24 +121,48 @@ if uploaded_file is not None:
         st.error(f"Erreur de lecture du fichier : {e}")
         st.stop()
 
-    # Charger le résultat backend
+    # Ici tu peux appeler ton backend pour générer le résultat
     try:
         df = pd.read_excel("resultat_classification.xlsx")
     except Exception as e:
         st.error(f"Impossible de lire le fichier résultat : {e}")
         st.stop()
 
-    # ────────────── STATISTIQUES ──────────────
+    # ────────────── STATISTIQUES GLOBALES ──────────────
     total_lignes = len(df)
     nb_sous_familles = df['SOUS_FAMILLE'].nunique()
     nb_agregats = df['AGREGAT'].nunique()
     nb_produits = df['NOM PRODUIT'].nunique()
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("📄 Lignes totales", f"{total_lignes:,}")
-    c2.metric("📂 Sous-familles", f"{nb_sous_familles:,}")
-    c3.metric("🔧 Agrégats", f"{nb_agregats:,}")
-    c4.metric("🛒 Produits", f"{nb_produits:,}")
+    with c1:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{total_lignes:,}</div>
+            <div class="stat-label">Lignes</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{nb_sous_familles:,}</div>
+            <div class="stat-label">Sous-familles</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{nb_agregats:,}</div>
+            <div class="stat-label">Agrégats</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c4:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{nb_produits:,}</div>
+            <div class="stat-label">Produits</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
     st.subheader("📑 Aperçu du fichier résultat classifié")
@@ -118,30 +179,25 @@ if uploaded_file is not None:
     st.markdown("---")
     st.subheader("📊 Dashboard interactif")
 
-    # ────────────── FILTRES MODERNES ──────────────
+    # ────────────── FILTRES SUR UNE LIGNE ──────────────
     sous_familles = sorted(df['SOUS_FAMILLE'].dropna().unique())
-    agregats_total = sorted(df['AGREGAT'].dropna().unique())
+    agregats = sorted(df['AGREGAT'].dropna().unique())
 
-    # deux selectbox côte à côte
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        selected_sous_famille = st.selectbox("🔎 Sous-famille :", ["(Toutes)"] + sous_familles)
-    with col_f2:
-        selected_agregat = st.selectbox("🔧 Agrégat :", ["(Tous)"] + agregats_total)
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_sous_famille = st.selectbox("🔎 Choisir une sous-famille :", ["(Toutes)"] + sous_familles)
+    with col2:
+        selected_agregat = st.selectbox("Choisir un agrégat :", ["(Tous)"] + agregats)
 
-    # filtre
+    df_filtered = df.copy()
     if selected_sous_famille != "(Toutes)":
-        df_filtered = df[df['SOUS_FAMILLE'] == selected_sous_famille]
-    else:
-        df_filtered = df.copy()
+        df_filtered = df_filtered[df_filtered['SOUS_FAMILLE'] == selected_sous_famille]
 
+    df_agregat = df_filtered.copy()
     if selected_agregat != "(Tous)":
-        df_agregat = df_filtered[df_filtered['AGREGAT'] == selected_agregat]
-    else:
-        df_agregat = df_filtered.copy()
+        df_agregat = df_agregat[df_agregat['AGREGAT'] == selected_agregat]
 
     # ────────────── GRAPHIQUES ──────────────
-    # Répartition des agrégats
     agg_counts = df_filtered['AGREGAT'].value_counts().reset_index()
     agg_counts.columns = ['AGREGAT', 'Nombre']
 
@@ -150,14 +206,12 @@ if uploaded_file is not None:
         x='AGREGAT',
         y='Nombre',
         text='Nombre',
-        title="Répartition des agrégats",
-        color='AGREGAT',
-        color_discrete_sequence=[ '#002366', '#F0B518', '#0b3a91', '#ffa500' ]
+        title="Répartition des agrégats dans la sous-famille sélectionnée",
+        color='AGREGAT'
     )
     fig_bar.update_traces(textposition='outside')
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Top produits
     produits_counts = df_agregat['NOM PRODUIT'].value_counts().head(20).reset_index()
     produits_counts.columns = ['NOM PRODUIT', 'Nombre']
 
@@ -165,13 +219,12 @@ if uploaded_file is not None:
         produits_counts,
         path=['NOM PRODUIT'],
         values='Nombre',
-        title="Top 20 produits"
+        title="Top 20 produits de l’agrégat sélectionné"
     )
-    fig_treemap.update_traces(root_color="#002366")
     st.plotly_chart(fig_treemap, use_container_width=True)
 
     st.markdown("### 📝 Aperçu des données filtrées")
     st.dataframe(df_agregat.head(30), use_container_width=True)
 
 else:
-    st.info("📂 Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
+    st.info("Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
