@@ -8,7 +8,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
+# ────────────── IMAGE HEADER ──────────────
+st.image("header.png", use_container_width=True)
 # ────────────── UPLOAD GPAIRO ──────────────
 st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("## Importer votre base Gpairo")
@@ -26,22 +27,13 @@ if uploaded_file is not None:
         st.error(f"Erreur de lecture du fichier : {e}")
         st.stop()
 
+    # Ici tu peux appeler ton backend pour générer le résultat
+    # Pour l'exemple, on suppose que resultat_classification.xlsx existe déjà :
     try:
         df = pd.read_excel("resultat_classification.xlsx")
     except Exception as e:
         st.error(f"Impossible de lire le fichier résultat : {e}")
         st.stop()
-
-    # === ZONE COLORÉE (image + stats + preview) ===
-    st.markdown(
-        """
-        <div style="background-color:#c2dcff;padding-top:0.5rem;padding-bottom:1rem;">
-        """,
-        unsafe_allow_html=True
-    )
-
-    # ────────────── IMAGE HEADER ──────────────
-    st.image("header.png", use_container_width=True)
 
     # ────────────── STATISTIQUES GLOBALES ──────────────
     total_lignes = len(df)
@@ -67,15 +59,12 @@ if uploaded_file is not None:
         mime="text/csv"
     )
 
-    # ferme la zone colorée
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ────────────── DASHBOARD ──────────────
     st.markdown("---")
     st.subheader("📊 Dashboard interactif")
 
     # ────────────── FILTRES SUR UNE MÊME LIGNE ──────────────
     col1, col2 = st.columns(2)
+
     sous_familles = sorted(df['SOUS_FAMILLE'].dropna().unique())
     selected_sous_famille = col1.selectbox("🔎 Choisir une sous-famille :", ["(Toutes)"] + sous_familles)
 
@@ -84,6 +73,7 @@ if uploaded_file is not None:
     else:
         df_filtered = df.copy()
 
+    # Agrégats disponibles
     agregats = sorted(df_filtered['AGREGAT'].dropna().unique())
     selected_agregat = col2.selectbox("Choisir un agrégat :", ["(Tous)"] + agregats)
 
@@ -93,8 +83,10 @@ if uploaded_file is not None:
         df_agregat = df_filtered.copy()
 
     # ────────────── GRAPHIQUES ──────────────
+    # Graph 1 : répartition agrégats
     agg_counts = df_filtered['AGREGAT'].value_counts().reset_index()
     agg_counts.columns = ['AGREGAT', 'Nombre']
+
     fig_bar = px.bar(
         agg_counts,
         x='AGREGAT',
@@ -106,10 +98,11 @@ if uploaded_file is not None:
     fig_bar.update_traces(textposition='outside')
     st.plotly_chart(fig_bar, use_container_width=True)
 
+    # Graph 2 : Top produits (limite 20 mais gère les cas <20)
     produits_counts = (
         df_agregat['NOM PRODUIT']
         .value_counts()
-        .head(20)
+        .head(20)  # si <20, renvoie juste ce qu'il y a
         .reset_index()
     )
     produits_counts.columns = ['NOM PRODUIT', 'Nombre']
@@ -125,6 +118,7 @@ if uploaded_file is not None:
     else:
         st.info("Aucun produit disponible pour l’agrégat sélectionné.")
 
+    # Aperçu des données filtrées
     st.markdown("### 📝 Aperçu des données filtrées")
     st.dataframe(df_agregat.head(30), use_container_width=True)
 
