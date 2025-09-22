@@ -9,36 +9,59 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS pour colorer tableaux et boutons
+# ────────────── CSS GLOBAL ──────────────
 st.markdown("""
 <style>
-/* style dataframe */
-[data-testid="stDataFrame"] table {
-    background-color:#fff3c2 !important;
-    border-radius:10px;
-}
+/* tableaux */
 thead tr th {
-    background-color:#c2dcff !important;
+    background-color:#8ecae6 !important;
     color:#023047 !important;
     font-weight:bold !important;
     text-align:center !important;
 }
 
-/* style bouton télécharger */
+/* cellule */
+[data-testid="stDataFrame"] table {
+    background-color:#fffdf6 !important;
+    border-radius:10px;
+}
+
+/* bouton télécharger */
 div.stDownloadButton > button {
-    background-color:#c2dcff !important;
+    background-color:#ffb703 !important;
     color:#023047 !important;
     font-weight:bold !important;
+    border:none;
     border-radius:8px !important;
 }
 
-/* style boutons filtres */
-.stButton>button {
-    background-color:#fff3c2 !important;
-    color:#023047 !important;
-    font-weight:bold !important;
-    border-radius:8px !important;
-    margin-bottom:0.3rem;
+/* boutons style texte agrégats & voir plus/moins */
+.agg-button, .toggle-button {
+    color: #023047 !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 5px 0 0 !important;
+    cursor: pointer !important;
+    font-size: 15px !important;
+    text-decoration: none !important; /* pas de soulignement */
+}
+.agg-button:hover, .toggle-button:hover {
+    color: #219ebc !important;
+}
+
+/* conteneur sous-famille */
+.subfam-box {
+    border: 1px solid #8ecae6;
+    border-radius: 5px;
+    padding: 8px;
+    margin-bottom: 15px;
+}
+.subfam-title {
+    font-weight: bold;
+    font-size: 17px;
+    color: #023047;
+    margin-bottom: 5px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -52,7 +75,6 @@ st.sidebar.markdown("## Importer votre base Gpairo")
 uploaded_file = st.sidebar.file_uploader("📂 Importer le fichier Gpairo", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
-    # Lecture fichier Gpairo (pour l'exemple on lit directement le résultat backend)
     try:
         if uploaded_file.name.endswith(".csv"):
             df_input = pd.read_csv(uploaded_file)
@@ -63,13 +85,15 @@ if uploaded_file is not None:
         st.error(f"Erreur de lecture du fichier : {e}")
         st.stop()
 
-    # Ici tu peux appeler ton backend pour générer le résultat
-    # Pour l'exemple, on suppose que resultat_classification.xlsx existe déjà :
+    # on lit ton résultat déjà produit en backend
     try:
         df = pd.read_excel("resultat_classification.xlsx")
     except Exception as e:
         st.error(f"Impossible de lire le fichier résultat : {e}")
         st.stop()
+
+    # filtrer sous-familles != Non identifiable
+    df = df[df["SOUS_FAMILLE"] != "Non identifiable"]
 
     # ────────────── STATISTIQUES GLOBALES ──────────────
     total_lignes = len(df)
@@ -118,22 +142,16 @@ if uploaded_file is not None:
         df_agregat = df_filtered.copy()
 
     # ────────────── GRAPHIQUES ──────────────
-    # Graph 1
     agg_counts = df_filtered['AGREGAT'].value_counts().reset_index()
     agg_counts.columns = ['AGREGAT', 'Nombre']
-
     fig_bar = px.bar(
         agg_counts,
-        x='AGREGAT',
-        y='Nombre',
-        text='Nombre',
-        title="Répartition des agrégats",
-        color='AGREGAT'
+        x='AGREGAT', y='Nombre', text='Nombre',
+        title="Répartition des agrégats", color='AGREGAT'
     )
     fig_bar.update_traces(textposition='outside')
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Graph 2
     produits_counts = (
         df_agregat['NOM PRODUIT']
         .value_counts()
@@ -141,7 +159,6 @@ if uploaded_file is not None:
         .reset_index()
     )
     produits_counts.columns = ['NOM PRODUIT', 'Nombre']
-
     if not produits_counts.empty:
         fig_treemap = px.treemap(
             produits_counts,
@@ -161,53 +178,31 @@ if uploaded_file is not None:
     st.subheader("🗂️ Exploration des produits")
 
     grouped = df.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
-
     if 'open_agregats' not in st.session_state:
         st.session_state.open_agregats = {}
 
-    for i in range(0, len(grouped), 2):  # 2 sous-familles par ligne
-        cols = st.columns(2)
-        for j in range(2):
-            if i + j >= len(grouped):
-                break
-            sousfam = grouped.iloc[i + j]['SOUS_FAMILLE']
-            ags = grouped.iloc[i + j]['AGREGAT']
+    for sousfam, ags in zip(grouped['SOUS_FAMILLE'], grouped['AGREGAT']):
+        st.markdown(f'<div class="subfam-box"><div class="subfam-title">{sousfam}</div>', unsafe_allow_html=True)
+        for agr in ags:
+            # bouton texte
+            if st.button(agr, key=f"{sousfam}_{agr}"):
+                st.session_state.open_agregats[agr] = not st.session_state.open_agregats.get(agr, False)
 
-            with cols[j]:
-                st.markdown(
-                    f"""
-                    <div style='background-color:#c2dcff;
-                                border-radius:10px;
-                                padding:1rem;
-                                box-shadow:0 4px 6px rgba(0,0,0,0.1);'>
-                        <h4 style='color:#023047;margin-top:0'>{sousfam}</h4>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
+            if st.session_state.open_agregats.get(agr, False):
+                produits = (
+                    df[df['AGREGAT'] == agr]['NOM PRODUIT']
+                    .dropna().tolist()
                 )
-
-                for agr in ags:
-                    if st.button(f"🔹 {agr}", key=f"{sousfam}_{agr}"):
-                        st.session_state.open_agregats[agr] = not st.session_state.open_agregats.get(agr, False)
-
-                    if st.session_state.open_agregats.get(agr, False):
-                        produits = (
-                            df[df['AGREGAT'] == agr]['NOM PRODUIT']
-                            .dropna()
-                            .value_counts()
-                            .index.tolist()
-                        )
-                        max_items = st.session_state.open_agregats.get(f"max_{agr}", 5)
-                        for p in produits[:max_items]:
-                            st.markdown(f"- {p}")
-
-                        if len(produits) > 5:
-                            label = "Voir plus" if max_items == 5 else "Voir moins"
-                            if st.button(label, key=f"voirplus_{agr}"):
-                                if max_items == 5:
-                                    st.session_state.open_agregats[f"max_{agr}"] = len(produits)
-                                else:
-                                    st.session_state.open_agregats[f"max_{agr}"] = 5
-                        st.markdown("")
+                max_items = st.session_state.open_agregats.get(f"max_{agr}", 5)
+                for p in produits[:max_items]:
+                    st.markdown(f"- {p}")
+                if len(produits) > 5:
+                    label = "Voir plus" if max_items == 5 else "Voir moins"
+                    if st.button(label, key=f"voirplus_{agr}"):
+                        if max_items == 5:
+                            st.session_state.open_agregats[f"max_{agr}"] = len(produits)
+                        else:
+                            st.session_state.open_agregats[f"max_{agr}"] = 5
+        st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.info("Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
