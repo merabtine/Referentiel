@@ -2,14 +2,38 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# ────────────── CONFIG ──────────────
 st.set_page_config(
     page_title="Référentiel Industriel",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-# ────────────── IMAGE HEADER ──────────────
-st.image("header.png", use_container_width=True)
+
+# --- CSS pour un header pleine largeur ---
+st.markdown("""
+    <style>
+        /* Supprime les marges de la page principale */
+        .block-container {
+            padding-top: 0rem;
+            padding-bottom: 0rem;
+            padding-left: 0rem;
+            padding-right: 0rem;
+            max-width: 100% !important;
+        }
+        /* supprime les marges du body */
+        .main {
+            padding: 0rem;
+        }
+        /* image pleine largeur */
+        .full-width-image img {
+            width: 100vw !important; /* largeur viewport */
+            height: auto;
+            display: block;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Image header pleine largeur ---
+st.markdown('<div class="full-width-image"><img src="header.png"></div>', unsafe_allow_html=True)
 # ────────────── UPLOAD GPAIRO ──────────────
 st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("## Importer votre base Gpairo")
