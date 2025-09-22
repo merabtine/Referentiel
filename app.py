@@ -129,16 +129,19 @@ st.subheader("🗂️ Exploration des produits")
 if uploaded_file is not None:
     grouped = df.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
 
-    # on garde l’état des agrégats ouverts
+    # état des agrégats ouverts
     if 'open_agregats' not in st.session_state:
         st.session_state.open_agregats = {}
+    if 'max_items' not in st.session_state:
+        st.session_state.max_items = {}
 
-    # 2 sous-familles par ligne
+    # deux sous-familles par ligne
     for i in range(0, len(grouped), 2):
         cols = st.columns(2)
         for j in range(2):
             if i + j >= len(grouped):
                 break
+
             sousfam = grouped.iloc[i + j]['SOUS_FAMILLE']
             ags = grouped.iloc[i + j]['AGREGAT']
 
@@ -155,33 +158,36 @@ if uploaded_file is not None:
                     unsafe_allow_html=True
                 )
 
-                # boutons d’agrégats (pas de compteur)
-                btn_cols = st.columns(4)
-                for k, agr in enumerate(ags):
-                    # bascule ouverture/fermeture
-                    if btn_cols[k % 4].button(agr, key=f"{sousfam}_{agr}"):
+                # un agrégat par ligne
+                for agr in ags:
+                    # afficher la liste si ouvert
+                    if st.session_state.open_agregats.get(agr, False):
+                        produits = (
+                            df[df['AGREGAT'] == agr]['NOM PRODUIT']
+                            .dropna().unique().tolist()
+                        )
+                        max_items = st.session_state.max_items.get(agr, 5)
+                        produits_aff = produits[:max_items]
+
+                        st.markdown(
+                            "<ul style='padding-left:20px;margin-bottom:0;'>"
+                            + "".join([f"<li>{p}</li>" for p in produits_aff])
+                            + "</ul>",
+                            unsafe_allow_html=True
+                        )
+
+                        if len(produits) > 5:
+                            if st.button("Voir plus", key=f"voirplus_{agr}"):
+                                # alterne entre 5 et tout
+                                if max_items == 5:
+                                    st.session_state.max_items[agr] = len(produits)
+                                else:
+                                    st.session_state.max_items[agr] = 5
+
+                    # bouton agrégat
+                    if st.button(agr, key=f"{sousfam}_{agr}"):
+                        # toggle
                         st.session_state.open_agregats[agr] = not st.session_state.open_agregats.get(agr, False)
 
-                # afficher les produits si agrégat ouvert
-                for agr in ags:
-                    if st.session_state.open_agregats.get(agr, False):
-                        produits_df = (
-                            df[df['AGREGAT'] == agr]['NOM PRODUIT']
-                            .value_counts()
-                            .reset_index()
-                        )
-                        produits_df.columns = ['NOM PRODUIT', 'Nombre']
-
-                        # on affiche 5 produits puis "voir plus"
-                        max_items = st.session_state.open_agregats.get(f"max_{agr}", 5)
-                        st.table(produits_df.head(max_items))
-
-                        if st.button("Voir plus", key=f"voirplus_{agr}"):
-                            if max_items == 5:
-                                st.session_state.open_agregats[f"max_{agr}"] = len(produits_df)
-                            else:
-                                st.session_state.open_agregats[f"max_{agr}"] = 5
-                        st.markdown("")  # espace
 else:
     st.info("Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
-
