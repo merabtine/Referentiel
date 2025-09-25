@@ -198,59 +198,49 @@ if uploaded_file is not None:
     st.dataframe(df_agregat.head(30), use_container_width=True)
 
 
-    # --- Exploration visuelle ---
+ # --- Exploration visuelle ---
 st.markdown("---")
 st.subheader("🗂️ Exploration des produits")
 
-grouped = df.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
+# on prépare un grouped propre : liste d’agrégats par sous-famille
+grouped = (
+    df.groupby('SOUS_FAMILLE')['AGREGAT']
+    .unique()
+    .reset_index()
+)
 
 # on parcourt 2 par 2 pour avoir 2 sous-familles par ligne
 for i in range(0, len(grouped), 2):
     colA, colB = st.columns(2)
 
     # -------- Première sous-famille --------
-    with colA:
-        sousfam = grouped.iloc[i]['SOUS_FAMILLE']
-        ags = grouped.iloc[i]['AGREGAT']
-        st.markdown(
-            f'<div class="subfam-box"><div class="subfam-title">{sousfam}</div>',
-            unsafe_allow_html=True
-        )
-        for agr in ags:
-            produits = df[df['AGREGAT'] == agr]['NOM PRODUIT'].dropna().tolist()
-            with st.expander(agr):  # agrégat dans un expander
-                # on limite d’abord à 5 produits
-                if len(produits) <= 5:
-                    for p in produits:
-                        st.markdown(f"- {p}")
-                else:
-                    # on montre 5 produits + bouton voir plus/moins
-                    show_all = st.checkbox("Voir tout", key=f"chk_{agr}")
-                    if show_all:
-                        for p in produits:
-                            st.markdown(f"- {p}")
-                    else:
-                        for p in produits[:5]:
-                            st.markdown(f"- {p}")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # -------- Deuxième sous-famille si elle existe --------
-    if i + 1 < len(grouped):
-        with colB:
-            sousfam2 = grouped.iloc[i+1]['SOUS_FAMILLE']
-            ags2 = grouped.iloc[i+1]['AGREGAT']
+    sousfam = grouped.iloc[i]['SOUS_FAMILLE']
+    if sousfam != "Non identifiable":
+        with colA:
+            ags = grouped.iloc[i]['AGREGAT']
+            # cadre englobant la sous-famille
             st.markdown(
-                f'<div class="subfam-box"><div class="subfam-title">{sousfam2}</div>',
+                f"""
+                <div style="border:1px solid #ccc; border-radius:8px; padding:10px; margin-bottom:15px;">
+                  <div style="font-weight:bold; color:blue; font-size:16px; margin-bottom:8px;">{sousfam}</div>
+                """,
                 unsafe_allow_html=True
             )
-            for agr in ags2:
+            for agr in ags:
+                # produits uniques
                 produits = df[df['AGREGAT'] == agr]['NOM PRODUIT'].dropna().tolist()
-                with st.expander(agr):  # agrégat dans un expander
+                produits = list(dict.fromkeys(produits))  # supprime doublons en gardant l'ordre
+                # expander sans soulignement ni cadre
+                with st.expander(f"{agr}"):
                     if len(produits) <= 5:
                         for p in produits:
                             st.markdown(f"- {p}")
                     else:
-                        show_all = st.checkbox("Voir tout", key=f"chk_{agr}")
+                        # clé unique par sousfamille+agrégat
+                        show_all = st.checkbox(
+                            "Voir tout",
+                            key=f"chk_{sousfam}_{agr}"
+                        )
                         if show_all:
                             for p in produits:
                                 st.markdown(f"- {p}")
@@ -258,6 +248,39 @@ for i in range(0, len(grouped), 2):
                             for p in produits[:5]:
                                 st.markdown(f"- {p}")
             st.markdown("</div>", unsafe_allow_html=True)
+
+    # -------- Deuxième sous-famille si elle existe --------
+    if i + 1 < len(grouped):
+        sousfam2 = grouped.iloc[i + 1]['SOUS_FAMILLE']
+        if sousfam2 != "Non identifiable":
+            with colB:
+                ags2 = grouped.iloc[i + 1]['AGREGAT']
+                st.markdown(
+                    f"""
+                    <div style="border:1px solid #ccc; border-radius:8px; padding:10px; margin-bottom:15px;">
+                      <div style="font-weight:bold; color:blue; font-size:16px; margin-bottom:8px;">{sousfam2}</div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                for agr in ags2:
+                    produits = df[df['AGREGAT'] == agr]['NOM PRODUIT'].dropna().tolist()
+                    produits = list(dict.fromkeys(produits))
+                    with st.expander(f"{agr}"):
+                        if len(produits) <= 5:
+                            for p in produits:
+                                st.markdown(f"- {p}")
+                        else:
+                            show_all = st.checkbox(
+                                "Voir tout",
+                                key=f"chk_{sousfam2}_{agr}"
+                            )
+                            if show_all:
+                                for p in produits:
+                                    st.markdown(f"- {p}")
+                            else:
+                                for p in produits[:5]:
+                                    st.markdown(f"- {p}")
+                st.markdown("</div>", unsafe_allow_html=True)
 
 else:
     st.info("Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
