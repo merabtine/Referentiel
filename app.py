@@ -199,58 +199,65 @@ if uploaded_file is not None:
 
 
     # --- Exploration visuelle ---
-    st.markdown("---")
-    st.subheader("🗂️ Exploration des produits")
+st.markdown("---")
+st.subheader("🗂️ Exploration des produits")
 
-    grouped = df.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
-    if 'open_agregats' not in st.session_state:
-        st.session_state.open_agregats = {}
+grouped = df.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
 
-    # on parcourt 2 par 2
-    for i in range(0, len(grouped), 2):
-        colA, colB = st.columns(2)
-        # première sous-famille
-        with colA:
-            sousfam = grouped.iloc[i]['SOUS_FAMILLE']
-            ags = grouped.iloc[i]['AGREGAT']
-            st.markdown(f'<div class="subfam-box"><div class="subfam-title">{sousfam}</div>', unsafe_allow_html=True)
-            for agr in ags:
-                if st.button(agr, key=f"{sousfam}_{agr}"):
-                    st.session_state.open_agregats[agr] = not st.session_state.open_agregats.get(agr, False)
-                if st.session_state.open_agregats.get(agr, False):
-                    produits = df[df['AGREGAT'] == agr]['NOM PRODUIT'].dropna().tolist()
-                    max_items = st.session_state.open_agregats.get(f"max_{agr}", 5)
-                    for p in produits[:max_items]:
+# on parcourt 2 par 2 pour avoir 2 sous-familles par ligne
+for i in range(0, len(grouped), 2):
+    colA, colB = st.columns(2)
+
+    # -------- Première sous-famille --------
+    with colA:
+        sousfam = grouped.iloc[i]['SOUS_FAMILLE']
+        ags = grouped.iloc[i]['AGREGAT']
+        st.markdown(
+            f'<div class="subfam-box"><div class="subfam-title">{sousfam}</div>',
+            unsafe_allow_html=True
+        )
+        for agr in ags:
+            produits = df[df['AGREGAT'] == agr]['NOM PRODUIT'].dropna().tolist()
+            with st.expander(agr):  # agrégat dans un expander
+                # on limite d’abord à 5 produits
+                if len(produits) <= 5:
+                    for p in produits:
                         st.markdown(f"- {p}")
-                    if len(produits) > 5:
-                        label = "Voir plus" if max_items == 5 else "Voir moins"
-                        if st.button(label, key=f"voirplus_{agr}"):
-                            if max_items == 5:
-                                st.session_state.open_agregats[f"max_{agr}"] = len(produits)
-                            else:
-                                st.session_state.open_agregats[f"max_{agr}"] = 5
-            st.markdown("</div>", unsafe_allow_html=True)
-        # deuxième sous-famille s'il en reste
-        if i+1 < len(grouped):
-            with colB:
-                sousfam2 = grouped.iloc[i+1]['SOUS_FAMILLE']
-                ags2 = grouped.iloc[i+1]['AGREGAT']
-                st.markdown(f'<div class="subfam-box"><div class="subfam-title">{sousfam2}</div>', unsafe_allow_html=True)
-                for agr in ags2:
-                    if st.button(agr, key=f"{sousfam2}_{agr}"):
-                        st.session_state.open_agregats[agr] = not st.session_state.open_agregats.get(agr, False)
-                    if st.session_state.open_agregats.get(agr, False):
-                        produits = df[df['AGREGAT'] == agr]['NOM PRODUIT'].dropna().tolist()
-                        max_items = st.session_state.open_agregats.get(f"max_{agr}", 5)
-                        for p in produits[:max_items]:
+                else:
+                    # on montre 5 produits + bouton voir plus/moins
+                    show_all = st.checkbox("Voir tout", key=f"chk_{agr}")
+                    if show_all:
+                        for p in produits:
                             st.markdown(f"- {p}")
-                        if len(produits) > 5:
-                            label = "Voir plus" if max_items == 5 else "Voir moins"
-                            if st.button(label, key=f"voirplus_{agr}"):
-                                if max_items == 5:
-                                    st.session_state.open_agregats[f"max_{agr}"] = len(produits)
-                                else:
-                                    st.session_state.open_agregats[f"max_{agr}"] = 5
-                st.markdown("</div>", unsafe_allow_html=True)
+                    else:
+                        for p in produits[:5]:
+                            st.markdown(f"- {p}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # -------- Deuxième sous-famille si elle existe --------
+    if i + 1 < len(grouped):
+        with colB:
+            sousfam2 = grouped.iloc[i+1]['SOUS_FAMILLE']
+            ags2 = grouped.iloc[i+1]['AGREGAT']
+            st.markdown(
+                f'<div class="subfam-box"><div class="subfam-title">{sousfam2}</div>',
+                unsafe_allow_html=True
+            )
+            for agr in ags2:
+                produits = df[df['AGREGAT'] == agr]['NOM PRODUIT'].dropna().tolist()
+                with st.expander(agr):  # agrégat dans un expander
+                    if len(produits) <= 5:
+                        for p in produits:
+                            st.markdown(f"- {p}")
+                    else:
+                        show_all = st.checkbox("Voir tout", key=f"chk_{agr}")
+                        if show_all:
+                            for p in produits:
+                                st.markdown(f"- {p}")
+                        else:
+                            for p in produits[:5]:
+                                st.markdown(f"- {p}")
+            st.markdown("</div>", unsafe_allow_html=True)
+
 else:
     st.info("Importez d'abord votre fichier Gpairo dans le menu latéral pour afficher le tableau de bord.")
