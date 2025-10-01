@@ -95,7 +95,7 @@ if page == "accueil":
     col1.plotly_chart(fig_donut, use_container_width=True)
     col2.dataframe(counts, use_container_width=True)
     st.markdown("### Aperçu du dataset global avant l'unification des designations", unsafe_allow_html=True)
-    col2.dataframe(df_dataset.head(5), use_container_width=True)
+    col2.dataframe(df_dataset.head(7), use_container_width=True)
     st.markdown("---")
     st.subheader("📑 Aperçu du référentiel central unifié")
     try:
@@ -112,7 +112,9 @@ if page == "accueil":
             df_ref,
             path=['FAMILLE','SOUS_FAMILLE'],
             values=None,  # compter automatiquement
-            title="Répartition hiérarchique"
+            title="Répartition hiérarchique",
+            width=1000,   
+            height=700
         )
         st.plotly_chart(fig_sun, use_container_width=True)
     except Exception as e:
