@@ -9,122 +9,100 @@ st.set_page_config(page_title="Référentiel Industriel", layout="wide", initial
 # ────────────── CSS GLOBAL ──────────────
 st.markdown("""
 <style>
-/* Sidebar navigation moderne */
-.sidebar .sidebar-content {
-    padding: 1rem;
-}
-.nav-link {
-    display: block;
-    padding: 10px 15px;
-    margin-bottom: 5px;
-    font-weight: bold;
-    text-decoration: none;
-    color: #023047;
-    border-left: 4px solid transparent;
-    transition: 0.3s;
-}
-.nav-link:hover {
-    background-color: #f0f8ff;
-    border-left: 4px solid #ffb703;
-}
-.active-link {
-    background-color: #e0f4ff;
-    border-left: 4px solid #ffb703;
-    color: #023047;
-}
-
 /* tableaux */
 thead tr th { background-color:#8ecae6 !important; color:#023047 !important; font-weight:bold !important; text-align:center !important; }
 [data-testid="stDataFrame"] table { background-color:#fffdf6 !important; border-radius:10px; }
-
-/* boutons download */
-div.stDownloadButton > button { background-color:#ffb703 !important; color:#023047 !important; font-weight:bold !important; border:none !important; border-radius:8px !important; }
-
+div.stDownloadButton > button { background-color:#ffb703 !important; color:#023047 !important; font-weight:bold !important; border:none; border-radius:8px !important; }
 .subfam-box { border: 1px solid #8ecae6; border-radius: 5px; padding: 8px; margin-bottom: 15px; }
 .subfam-title { font-weight: bold; font-size: 17px; color: #023047; margin-bottom: 5px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ────────────── HEADER COMMUN ──────────────
+# ────────────── HEADER ──────────────
 st.image("header.png", use_container_width=True)
 
-# ────────────── SIDEBAR NAVIGATION ──────────────
-st.sidebar.image("logo.png", width=140)
-st.sidebar.markdown("## Navigation")
-pages = ["Accueil", "Pièces de rechange", "Installations fixes"]
-
-# Création de liens stylés
-selected_page = st.sidebar.radio(">> Aller à :", pages)
-
 # ────────────── LECTURE DES FICHIERS ──────────────
-df_central = pd.read_csv("Referentiel Central.csv")
+df_gpairo = pd.read_csv("dataset_gpairo_webpdrmif.csv")  # Entrée avant traitement
+df_referentiel = pd.read_csv("Referentiel Central.csv")  # Résultat après traitement
 df_pieces = pd.read_csv("Ref_Pieces de rechange_Gpairo.csv")
 df_install = pd.read_csv("Ref_Installations fixes_Mif.csv")
 df_corresp = pd.read_csv("Table de correspondance.csv")
 
-# ────────────── FONCTION PIE CIRCLE DESI_ARTI ──────────────
-def plot_donut_desiarit(df):
-    counts = df.groupby('BASE')['DESI_ARTI'].nunique().reset_index()
+# ────────────── SIDEBAR NAVIGATION ──────────────
+st.sidebar.image("logo.png", width=140)
+page = st.sidebar.radio("Navigation", ["Accueil", "Pièces de rechange", "Installations fixes"])
+
+# ────────────── FONCTION UTILE : DONUT DESI_ARTI ──────────────
+def plot_donut_desiarit(df, col_label='BASE', col_value='DESI_ARTI', title="Répartition"):
+    counts = df.groupby(col_label)[col_value].nunique().reset_index()
     fig = go.Figure(data=[go.Pie(
-        labels=counts['BASE'],
-        values=counts['DESI_ARTI'],
+        labels=counts[col_label],
+        values=counts[col_value],
         hole=0.5,
         textinfo='label+percent',
-        marker=dict(colors=['#023047', '#ffb703'])
+        marker=dict(colors=px.colors.qualitative.Dark24)
     )])
-    fig.update_layout(title=f"Total DESI_ARTI uniques : {df['DESI_ARTI'].nunique():,}", title_x=0.5)
+    fig.update_layout(title=f"{title} (Total uniques : {df[col_value].nunique():,})", title_x=0.5)
     return fig
 
-# ────────────── ACCUEIL ──────────────
-if selected_page == "Accueil":
+# ────────────── PAGE : ACCUEIL ──────────────
+if page == "Accueil":
     st.header("🏠 Référentiel Central")
-
-    # Cercle DESI_ARTI par base
-    st.plotly_chart(plot_donut_desiarit(df_central), use_container_width=True)
-
-    # Statistiques post-normalisation
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("📂 Familles", df_central['FAMILLE'].nunique())
-    col2.metric("🔹 Sous-familles", df_central['SOUS_FAMILLE'].nunique())
-    col3.metric("⚙ Agrégats", df_central['AGREGAT'].nunique())
-    col4.metric("🛒 Produits uniques", df_central['NOM PRODUIT'].nunique())
-
-    # Graphiques interactifs
-    st.markdown("### Répartition des Agrégats")
-    fig_agg = px.bar(df_central['AGREGAT'].value_counts().reset_index().rename(columns={'index':'AGREGAT','AGREGAT':'Nombre'}),
-                     x='AGREGAT', y='Nombre', text='Nombre', color='AGREGAT')
-    fig_agg.update_traces(textposition='outside')
-    st.plotly_chart(fig_agg, use_container_width=True)
-
-    st.markdown("### Répartition des Familles")
-    fig_fam = px.pie(df_central['FAMILLE'].value_counts().reset_index().rename(columns={'index':'FAMILLE','FAMILLE':'Nombre'}),
-                     names='FAMILLE', values='Nombre', color_discrete_sequence=px.colors.sequential.Teal)
-    st.plotly_chart(fig_fam, use_container_width=True)
-
+    
+    st.subheader("📊 Statistiques globales - avant traitement")
+    total_lignes = len(df_gpairo)
+    total_desiarit = df_gpairo['DESI_ARTI'].nunique()
+    st.metric("📄 Total lignes", f"{total_lignes:,}")
+    st.metric("🛒 Total DESI_ARTI uniques", f"{total_desiarit:,}")
+    
+    st.markdown("### Aperçu du dataset global (head)")
+    st.dataframe(df_gpairo.head(50), use_container_width=True)
+    
+    st.markdown("---")
+    st.subheader("📊 Dashboard après traitement")
+    st.markdown("### Statistiques globales")
+    total_produits = df_referentiel['NOM PRODUIT'].nunique()
+    nb_familles = df_referentiel['FAMILLE'].nunique()
+    nb_sousfamilles = df_referentiel['SOUS_FAMILLE'].nunique()
+    nb_agregats = df_referentiel['AGREGAT'].nunique()
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("📂 Familles", nb_familles)
+    c2.metric("🔹 Sous-familles", nb_sousfamilles)
+    c3.metric("⚙ Agrégats", nb_agregats)
+    c4.metric("🛒 Produits uniques", total_produits)
+    
+    st.plotly_chart(plot_donut_desiarit(df_referentiel, col_label='BASE', col_value='DESI_ARTI', title="Répartition DESI_ARTI par Base"), use_container_width=True)
+    
     st.markdown("### Top 10 Sous-familles par nombre de produits")
-    top_sousfam = df_central.groupby('SOUS_FAMILLE')['NOM PRODUIT'].nunique().sort_values(ascending=False).head(10)
+    top_sousfam = df_referentiel.groupby('SOUS_FAMILLE')['NOM PRODUIT'].nunique().sort_values(ascending=False).head(10)
     fig_top = px.bar(top_sousfam.reset_index().rename(columns={'NOM PRODUIT':'Nombre'}),
                      x='SOUS_FAMILLE', y='Nombre', text='Nombre', color='Nombre')
     st.plotly_chart(fig_top, use_container_width=True)
-
+    
     st.markdown("---")
-    with st.expander("📑 Aperçu du Référentiel Central"):
-        st.dataframe(df_central.head(50), use_container_width=True)
-        st.download_button("💾 Télécharger CSV", data=df_central.to_csv(index=False).encode('utf-8-sig'),
-                           file_name="Referentiel Central.csv", mime="text/csv")
-
+    st.subheader("📑 Aperçu du Référentiel Central")
+    st.dataframe(df_referentiel.head(50), use_container_width=True)
+    st.download_button("💾 Télécharger CSV", data=df_referentiel.to_csv(index=False).encode('utf-8-sig'),
+                       file_name="Referentiel_central.csv", mime="text/csv")
+    
     st.markdown("---")
     st.subheader("🔗 Table de correspondance")
     st.dataframe(df_corresp, use_container_width=True)
 
-# ────────────── PIÈCES DE RECHANGE ──────────────
-elif selected_page == "Pièces de rechange":
+# ────────────── PAGE : PIÈCES DE RECHANGE ──────────────
+elif page == "Pièces de rechange":
     st.header("🔧 Pièces de rechange")
+    
+    st.subheader("📊 Statistiques globales - avant traitement")
+    st.metric("📄 Total lignes", len(df_gpairo))
+    st.metric("🛒 Total DESI_ARTI uniques", df_gpairo['DESI_ARTI'].nunique())
+    
+    st.markdown("### Aperçu du dataset pièces de rechange")
     st.dataframe(df_pieces.head(50), use_container_width=True)
-    st.download_button("💾 Télécharger CSV",
-                       data=df_pieces.to_csv(index=False).encode('utf-8-sig'),
+    st.download_button("💾 Télécharger CSV", data=df_pieces.to_csv(index=False).encode('utf-8-sig'),
                        file_name="Ref_Pieces_de_rechange_Gpairo.csv", mime="text/csv")
-
+    
     st.markdown("---")
     st.subheader("🗂️ Exploration par Sous-famille")
     grouped = df_pieces.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
@@ -133,23 +111,28 @@ elif selected_page == "Pièces de rechange":
         for j, col in enumerate([colA, colB]):
             if i+j < len(grouped):
                 sousfam = grouped.iloc[i+j]['SOUS_FAMILLE']
-                ags = grouped.iloc[i+j]['AGREGAT']
                 with col:
-                    st.markdown(f"**{sousfam}**")
-                    for agr in ags:
-                        with st.expander(agr):
+                    ags = grouped.iloc[i+j]['AGREGAT']
+                    with st.expander(sousfam):
+                        for agr in ags:
                             produits = df_pieces[df_pieces['AGREGAT']==agr]['NOM PRODUIT'].unique().tolist()
-                            for p in produits[:5]:
-                                st.markdown(f"- {p}")
+                            with st.expander(agr):
+                                for p in produits[:10]:
+                                    st.markdown(f"- {p}")
 
-# ────────────── INSTALLATIONS FIXES ──────────────
-elif selected_page == "Installations fixes":
+# ────────────── PAGE : INSTALLATIONS FIXES ──────────────
+elif page == "Installations fixes":
     st.header("🏗 Installations fixes")
+    
+    st.subheader("📊 Statistiques globales - avant traitement")
+    st.metric("📄 Total lignes", len(df_webpdrmif))
+    st.metric("🛒 Total DESI_ARTI uniques", df_webpdrmif['DESI_ARTI'].nunique())
+    
+    st.markdown("### Aperçu du dataset installations fixes")
     st.dataframe(df_install.head(50), use_container_width=True)
-    st.download_button("💾 Télécharger CSV",
-                       data=df_install.to_csv(index=False).encode('utf-8-sig'),
-                       file_name="Ref_Installations fixes_Mif.csv", mime="text/csv")
-
+    st.download_button("💾 Télécharger CSV", data=df_install.to_csv(index=False).encode('utf-8-sig'),
+                       file_name="Ref_Installations_fixes_Mif.csv", mime="text/csv")
+    
     st.markdown("---")
     st.subheader("🗂️ Exploration par Sous-famille")
     grouped = df_install.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
@@ -158,11 +141,11 @@ elif selected_page == "Installations fixes":
         for j, col in enumerate([colA, colB]):
             if i+j < len(grouped):
                 sousfam = grouped.iloc[i+j]['SOUS_FAMILLE']
-                ags = grouped.iloc[i+j]['AGREGAT']
                 with col:
-                    st.markdown(f"**{sousfam}**")
-                    for agr in ags:
-                        with st.expander(agr):
+                    ags = grouped.iloc[i+j]['AGREGAT']
+                    with st.expander(sousfam):
+                        for agr in ags:
                             produits = df_install[df_install['AGREGAT']==agr]['NOM PRODUIT'].unique().tolist()
-                            for p in produits[:5]:
-                                st.markdown(f"- {p}")
+                            with st.expander(agr):
+                                for p in produits[:10]:
+                                    st.markdown(f"- {p}")
