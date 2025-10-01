@@ -14,7 +14,7 @@ st.markdown("""
 <style>
 thead tr th { background-color:#8ecae6 !important; color:#023047 !important; font-weight:bold !important; text-align:center !important; }
 [data-testid="stDataFrame"] table { background-color:#fffdf6 !important; border-radius:10px; }
-div.stDownloadButton > button { background-color:#ffb703 !important; color:#023047 !important; font-weight:bold !important; border:none; border-radius:8px !important; }
+div.stDownloadButton > button { background-color:#ffb703 !important; color:#023047 !important; font-weight:bold !important; border:none !important; border-radius:8px !important; }
 .subfam-box { border: 1px solid #8ecae6; border-radius: 5px; padding: 8px; margin-bottom: 15px; }
 .subfam-title { font-weight: bold; font-size: 17px; color: #023047; margin-bottom: 5px; }
 </style>
@@ -27,27 +27,35 @@ st.image("header.png", use_container_width=True)
 st.sidebar.image("logo.png", width=140)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)  # espace sous le logo
 
-# Récupérer la page actuelle via query_params
-query_params = st.experimental_get_query_params()
-page = query_params.get("page", ["webpdrmif"])[0]  # valeur par défaut WebPDRMIF
+# Initialiser page dans session_state si elle n'existe pas
+if "page" not in st.session_state:
+    st.session_state.page = "webpdrmif"  # valeur par défaut
 
 # Boutons de navigation
 if st.sidebar.button("🛠️ Pièces de rechange (Gpairo)"):
-    st.experimental_set_query_params(page="gpairo")
-    st.experimental_rerun()
+    st.session_state.page = "gpairo"
 if st.sidebar.button("🏭 Installations fixes (WebPDRMIF)"):
-    st.experimental_set_query_params(page="webpdrmif")
-    st.experimental_rerun()
+    st.session_state.page = "webpdrmif"
+
+page = st.session_state.page
 
 # ────────────── CHARGEMENT DES FICHIERS SELON PAGE ──────────────
-if page == "gpairo":
-    dataset_file = "dataset_gpairo.xlsx"
-    result_file = "Ref_Pieces de rechange_Gpairo.csv"
-    page_title = "Pièces de rechange (Gpairo)"
-else:
-    dataset_file = "dataset_webpdrmif.csv"
-    result_file = "Ref_Installations fixes_Mif.csv"
-    page_title = "Installations fixes (WebPDRMIF)"
+page_files = {
+    "gpairo": {
+        "dataset": "dataset_gpairo.xlsx",
+        "result": "Ref_Pieces de rechange_Gpairo.csv",
+        "title": "Pièces de rechange (Gpairo)"
+    },
+    "webpdrmif": {
+        "dataset": "dataset_webpdrmif.csv",
+        "result": "Ref_Installations fixes_Mif.csv",
+        "title": "Installations fixes (WebPDRMIF)"
+    }
+}
+
+dataset_file = page_files[page]["dataset"]
+result_file = page_files[page]["result"]
+page_title = page_files[page]["title"]
 
 st.title(page_title)
 
