@@ -4,7 +4,7 @@ import plotly.express as px
 
 # ────────────── CONFIG ──────────────
 st.set_page_config(
-    page_title="Référentiel Installations Fixes",
+    page_title="Référentiel Industriel",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -25,23 +25,47 @@ st.image("header.png", use_container_width=True)
 
 # ────────────── SIDEBAR NAVIGATION ──────────────
 st.sidebar.image("logo.png", width=140)
+st.sidebar.markdown("<br>", unsafe_allow_html=True)  # espace sous le logo
 
+# Récupérer la page actuelle via query_params
+query_params = st.experimental_get_query_params()
+page = query_params.get("page", ["webpdrmif"])[0]  # valeur par défaut WebPDRMIF
+
+# Boutons de navigation
 if st.sidebar.button("🛠️ Pièces de rechange (Gpairo)"):
     st.experimental_set_query_params(page="gpairo")
+    st.experimental_rerun()
 if st.sidebar.button("🏭 Installations fixes (WebPDRMIF)"):
     st.experimental_set_query_params(page="webpdrmif")
+    st.experimental_rerun()
 
-# ────────────── LECTURE FICHIERS ──────────────
+# ────────────── CHARGEMENT DES FICHIERS SELON PAGE ──────────────
+if page == "gpairo":
+    dataset_file = "dataset_gpairo.xlsx"
+    result_file = "Ref_Pieces de rechange_Gpairo.csv"
+    page_title = "Pièces de rechange (Gpairo)"
+else:
+    dataset_file = "dataset_webpdrmif.csv"
+    result_file = "Ref_Installations fixes_Mif.csv"
+    page_title = "Installations fixes (WebPDRMIF)"
+
+st.title(page_title)
+
+# Lecture dataset principal
 try:
-    df_dataset = pd.read_csv("dataset_webpdrmif.csv", encoding="utf-8-sig")
+    if dataset_file.endswith(".csv"):
+        df_dataset = pd.read_csv(dataset_file, encoding="utf-8-sig")
+    else:
+        df_dataset = pd.read_excel(dataset_file)
 except Exception as e:
-    st.error(f"Erreur lecture dataset_webpdrmif.csv : {e}")
+    st.error(f"Erreur lecture {dataset_file} : {e}")
     st.stop()
 
+# Lecture fichier résultat
 try:
-    df = pd.read_csv("Ref_Installations fixes_Mif.csv", encoding="utf-8-sig")
+    df = pd.read_csv(result_file, encoding="utf-8-sig")
 except Exception as e:
-    st.error(f"Erreur lecture Ref_Installations fixes_Mif.csv : {e}")
+    st.error(f"Erreur lecture {result_file} : {e}")
     st.stop()
 
 # Normalisation colonnes
@@ -72,7 +96,7 @@ csv = df.to_csv(index=False).encode('utf-8-sig')
 st.download_button(
     "💾 Télécharger le fichier résultat (CSV)",
     data=csv,
-    file_name="resultat_installations_fixes.csv",
+    file_name=result_file.replace("Ref_", "resultat_"),
     mime="text/csv"
 )
 
@@ -120,7 +144,6 @@ if 'SOUS_FAMILLE' in df.columns:
 
     for i in range(0, len(grouped), 2):
         colA, colB = st.columns(2)
-
         for j, col in enumerate([colA, colB]):
             if i + j < len(grouped):
                 sousfam = grouped.iloc[i + j]['SOUS_FAMILLE']
