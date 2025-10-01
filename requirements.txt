@@ -4,3 +4,4 @@ altair
 matplotlib
 plotly
 openpyxl
+plotly.graph_objects

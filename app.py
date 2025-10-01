@@ -9,23 +9,28 @@ st.set_page_config(page_title="Référentiel Industriel", layout="wide", initial
 # ────────────── CSS GLOBAL ──────────────
 st.markdown("""
 <style>
-/* Onglets stylés */
-.tab-button {
-    background-color: #023047;
-    color: white;
-    border-radius: 8px;
-    padding: 8px 16px;
-    margin-right: 5px;
-    cursor: pointer;
-    display: inline-block;
+/* Sidebar navigation moderne */
+.sidebar .sidebar-content {
+    padding: 1rem;
+}
+.nav-link {
+    display: block;
+    padding: 10px 15px;
+    margin-bottom: 5px;
     font-weight: bold;
+    text-decoration: none;
+    color: #023047;
+    border-left: 4px solid transparent;
+    transition: 0.3s;
 }
-.tab-button:hover {
-    background-color: #219ebc;
+.nav-link:hover {
+    background-color: #f0f8ff;
+    border-left: 4px solid #ffb703;
 }
-.active-tab {
-    background-color: #ffb703 !important;
-    color: #023047 !important;
+.active-link {
+    background-color: #e0f4ff;
+    border-left: 4px solid #ffb703;
+    color: #023047;
 }
 
 /* tableaux */
@@ -33,7 +38,7 @@ thead tr th { background-color:#8ecae6 !important; color:#023047 !important; fon
 [data-testid="stDataFrame"] table { background-color:#fffdf6 !important; border-radius:10px; }
 
 /* boutons download */
-div.stDownloadButton > button { background-color:#ffb703 !important; color:#023047 !important; font-weight:bold !important; border:none; border-radius:8px !important; }
+div.stDownloadButton > button { background-color:#ffb703 !important; color:#023047 !important; font-weight:bold !important; border:none !important; border-radius:8px !important; }
 
 .subfam-box { border: 1px solid #8ecae6; border-radius: 5px; padding: 8px; margin-bottom: 15px; }
 .subfam-title { font-weight: bold; font-size: 17px; color: #023047; margin-bottom: 5px; }
@@ -43,9 +48,13 @@ div.stDownloadButton > button { background-color:#ffb703 !important; color:#0230
 # ────────────── HEADER COMMUN ──────────────
 st.image("header.png", use_container_width=True)
 
-# ────────────── ONGLET STYLE MODERNE ──────────────
-tabs = ["Accueil", "Pièces de rechange", "Installations fixes"]
-selected_tab = st.radio("", tabs, horizontal=True)
+# ────────────── SIDEBAR NAVIGATION ──────────────
+st.sidebar.image("logo.png", width=140)
+st.sidebar.markdown("## Navigation")
+pages = ["Accueil", "Pièces de rechange", "Installations fixes"]
+
+# Création de liens stylés
+selected_page = st.sidebar.radio(">> Aller à :", pages)
 
 # ────────────── LECTURE DES FICHIERS ──────────────
 df_central = pd.read_csv("Referentiel Central.csv")
@@ -53,10 +62,9 @@ df_pieces = pd.read_csv("Ref_Pieces de rechange_Gpairo.csv")
 df_install = pd.read_csv("Ref_Installations fixes_Mif.csv")
 df_corresp = pd.read_csv("Table de correspondance.csv")
 
-# ────────────── FONCTION UTILE : PIE CIRCLE DESI_ARTI ──────────────
+# ────────────── FONCTION PIE CIRCLE DESI_ARTI ──────────────
 def plot_donut_desiarit(df):
     counts = df.groupby('BASE')['DESI_ARTI'].nunique().reset_index()
-    counts['Autres'] = counts['DESI_ARTI'].sum() - counts['DESI_ARTI']
     fig = go.Figure(data=[go.Pie(
         labels=counts['BASE'],
         values=counts['DESI_ARTI'],
@@ -68,7 +76,7 @@ def plot_donut_desiarit(df):
     return fig
 
 # ────────────── ACCUEIL ──────────────
-if selected_tab == "Accueil":
+if selected_page == "Accueil":
     st.header("🏠 Référentiel Central")
 
     # Cercle DESI_ARTI par base
@@ -81,7 +89,7 @@ if selected_tab == "Accueil":
     col3.metric("⚙ Agrégats", df_central['AGREGAT'].nunique())
     col4.metric("🛒 Produits uniques", df_central['NOM PRODUIT'].nunique())
 
-    # Graphiques interactifs supplémentaires
+    # Graphiques interactifs
     st.markdown("### Répartition des Agrégats")
     fig_agg = px.bar(df_central['AGREGAT'].value_counts().reset_index().rename(columns={'index':'AGREGAT','AGREGAT':'Nombre'}),
                      x='AGREGAT', y='Nombre', text='Nombre', color='AGREGAT')
@@ -110,7 +118,7 @@ if selected_tab == "Accueil":
     st.dataframe(df_corresp, use_container_width=True)
 
 # ────────────── PIÈCES DE RECHANGE ──────────────
-elif selected_tab == "Pièces de rechange":
+elif selected_page == "Pièces de rechange":
     st.header("🔧 Pièces de rechange")
     st.dataframe(df_pieces.head(50), use_container_width=True)
     st.download_button("💾 Télécharger CSV",
@@ -135,7 +143,7 @@ elif selected_tab == "Pièces de rechange":
                                 st.markdown(f"- {p}")
 
 # ────────────── INSTALLATIONS FIXES ──────────────
-elif selected_tab == "Installations fixes":
+elif selected_page == "Installations fixes":
     st.header("🏗 Installations fixes")
     st.dataframe(df_install.head(50), use_container_width=True)
     st.download_button("💾 Télécharger CSV",
