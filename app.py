@@ -37,7 +37,7 @@ if st.sidebar.button("🏠 Accueil"):
     st.session_state.page = "accueil"
 if st.sidebar.button("🛠️ Pièces de rechange (Gpairo)"):
     st.session_state.page = "gpairo"
-if st.sidebar.button("🏭 Installations fixes (WebPDRMIF)"):
+if st.sidebar.button("🏭 Installations fixes (Webpdrmif)"):
     st.session_state.page = "webpdrmif"
 
 page = st.session_state.page
@@ -58,7 +58,7 @@ page_files = {
     "webpdrmif": {
         "dataset": "dataset_webpdrmif.csv",
         "result": "Ref_Installations fixes_Mif.csv",
-        "title": "Installations fixes (WebPDRMIF)"
+        "title": "Installations fixes (Webpdrmif)"
     }
 }
 
@@ -76,27 +76,28 @@ if page == "accueil":
     # Donut chart DESI_ARTI par BASE
     df_unique = df_dataset[['BASE','DESI_ARTI']].drop_duplicates()
     counts = df_unique['BASE'].value_counts().reset_index()
-    counts.columns = ['BASE', 'Nombre_DESI_ARTI']
+    counts.columns = ['Source', 'Nombre d\'articles']
 
     fig_donut = go.Figure(data=[go.Pie(
-        labels=counts['BASE'],
-        values=counts['Nombre_DESI_ARTI'],
+        labels=counts['Source'],
+        values=counts['Nombre d\'articles'],
         hole=.4,
         textinfo='label+percent'
     )])
     total_des = df_unique['DESI_ARTI'].nunique()
     fig_donut.update_layout(
         annotations=[dict(text=f"{total_des}", x=0.5, y=0.5, font_size=20, showarrow=False)],
-        title="Distribution des DESI_ARTI par BASE"
+        title="Distribution des articles par référentiel"
     )
 
     # Affichage côté gauche (donut) et côté droit (tableau)
     col1, col2 = st.columns([1,1])
     col1.plotly_chart(fig_donut, use_container_width=True)
     col2.dataframe(counts, use_container_width=True)
-
+    st.markdown("### Aperçu du dataset global avant l'unification des designations", unsafe_allow_html=True)
+    col2.dataframe(df_dataset.head(5), use_container_width=True)
     st.markdown("---")
-    st.subheader("📑 Aperçu du référentiel central")
+    st.subheader("📑 Aperçu du référentiel central unifié")
     try:
         df_ref = pd.read_csv(page_files[page]["referentiel"], encoding="utf-8-sig")
         st.dataframe(df_ref.head(50), use_container_width=True)
@@ -104,12 +105,12 @@ if page == "accueil":
         st.error(f"Erreur lecture {page_files[page]['referentiel']} : {e}")
 
     st.markdown("---")
-    st.subheader("🌞 Distribution FAMILLE > SOUS_FAMILLE > AGREGAT")
+    st.subheader("🌞 Distribution des familles et sous-familles")
     try:
         # Sunburst chart
         fig_sun = px.sunburst(
             df_ref,
-            path=['FAMILLE','SOUS_FAMILLE','AGREGAT'],
+            path=['FAMILLE','SOUS_FAMILLE'],
             values=None,  # compter automatiquement
             title="Répartition hiérarchique"
         )
