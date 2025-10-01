@@ -226,3 +226,32 @@ else:
             st.plotly_chart(fig_treemap, use_container_width=True)
         else:
             st.info("Aucun produit disponible pour l'agrégat sélectionné.")
+ # ────────────── EXPLORATION VISUELLE DES PRODUITS ──────────────
+    st.markdown("---")
+    st.subheader("🗂️ Exploration des produits")
+    grouped = df.groupby('SOUS_FAMILLE')['AGREGAT'].unique().reset_index()
+
+    for i in range(0, len(grouped), 2):
+        colA, colB = st.columns(2)
+        for j, col in enumerate([colA, colB]):
+            if i + j < len(grouped):
+                sousfam = grouped.iloc[i + j]['SOUS_FAMILLE']
+                if sousfam != "Non identifiable":
+                    with col:
+                        ags = grouped.iloc[i + j]['AGREGAT']
+                        st.markdown(f"""<div style="border:1px solid #ccc; border-radius:8px; padding:10px; margin-bottom:15px;">
+                                         <div style="font-weight:bold; color:blue; font-size:16px; margin-bottom:8px;">{sousfam}</div>""",
+                                    unsafe_allow_html=True)
+                        for agr in ags:
+                            produits = df[df['AGREGAT'] == agr]['NOM PRODUIT'].dropna().tolist()
+                            produits = list(dict.fromkeys(produits))
+                            with st.expander(f"{agr}"):
+                                if len(produits) <= 5:
+                                    for p in produits: st.markdown(f"- {p}")
+                                else:
+                                    show_all = st.checkbox("Voir tout", key=f"chk_{sousfam}_{agr}")
+                                    if show_all:
+                                        for p in produits: st.markdown(f"- {p}")
+                                    else:
+                                        for p in produits[:5]: st.markdown(f"- {p}")
+                        st.markdown("</div>", unsafe_allow_html=True)
