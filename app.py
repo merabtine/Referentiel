@@ -204,7 +204,16 @@ else:
     st.markdown("---")
     st.subheader("📑 Aperçu du fichier résultat classifié")
     st.dataframe(df.head(50), use_container_width=True)
+    st.markdown("### 🔎 Rechercher un produit")
+    search_term = st.text_input("Entrer le nom du produit")
 
+    if search_term:
+           results = df[df["NOM PRODUIT"].str.contains(search_term, case=False, na=False)]
+           if not results.empty:
+              st.success(f"{len(results)} résultat(s) trouvé(s)")
+              st.dataframe(results, use_container_width=True)
+           else:
+              st.warning("Aucun produit trouvé pour cette recherche.")  
     csv = df.to_csv(index=False).encode('utf-8-sig')
     st.download_button(
         "💾 Télécharger le fichier résultat (CSV)",
