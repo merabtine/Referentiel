@@ -101,6 +101,17 @@ if page == "accueil":
     try:
         df_ref = pd.read_csv(page_files[page]["referentiel"], encoding="utf-8-sig")
         st.dataframe(df_ref.head(50), use_container_width=True)
+        # 🔎 Recherche par NOM PRODUIT
+        st.markdown("### 🔎 Rechercher un produit")
+        search_term = st.text_input("Entrer le nom du produit")
+
+        if search_term:
+           results = df_ref[df_ref["NOM PRODUIT"].str.contains(search_term, case=False, na=False)]
+           if not results.empty:
+              st.success(f"{len(results)} résultat(s) trouvé(s)")
+              st.dataframe(results, use_container_width=True)
+           else:
+              st.warning("Aucun produit trouvé pour cette recherche.")
     except Exception as e:
         st.error(f"Erreur lecture {page_files[page]['referentiel']} : {e}")
 
